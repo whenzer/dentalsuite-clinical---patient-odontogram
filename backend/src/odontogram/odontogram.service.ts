@@ -24,6 +24,8 @@ export class OdontogramService {
     private readonly realtimeGateway: ClinicalGateway,
   ) {}
 
+  private readonly bulkUpdateQueues = new Map<string, Promise<unknown>>();
+
   /**
    * Returns standard 32-tooth odontogram chart Record<number, ToothData>
    */
@@ -103,6 +105,25 @@ export class OdontogramService {
    * Bulk update 32-tooth chart
    */
   async bulkUpdateChart(patientId: string, chartData: TeethChartState): Promise<TeethChartState> {
+    const previousUpdate = this.bulkUpdateQueues.get(patientId) || Promise.resolve();
+    const currentUpdate = previousUpdate
+      .catch(() => undefined)
+      .then(() => this.persistBulkUpdateChart(patientId, chartData));
+
+    this.bulkUpdateQueues.set(patientId, currentUpdate);
+    try {
+      return await currentUpdate;
+    } finally {
+      if (this.bulkUpdateQueues.get(patientId) === currentUpdate) {
+        this.bulkUpdateQueues.delete(patientId);
+      }
+    }
+  }
+
+  private async persistBulkUpdateChart(
+    patientId: string,
+    chartData: TeethChartState,
+  ): Promise<TeethChartState> {
     const toothNumbers = Object.keys(chartData).map(Number);
 
     for (const num of toothNumbers) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Customer,
   DentalPhoto,
@@ -129,6 +129,7 @@ export default function App() {
 
   // Backend connection & modal state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const dirtyChartPatients = useRef(new Set<string>());
   const [isBackendSettingsOpen, setIsBackendSettingsOpen] = useState(false);
 
   // Synchronize state with NestJS + Supabase REST API
@@ -159,8 +160,14 @@ export default function App() {
             setSelectedCustomerId(fallbackId);
           }
 
-          saveCustomers(mapped);
-          return mapped;
+          const merged = mapped.map((patient) => {
+            const cached = previous.find((item) => item.id === patient.id);
+            return dirtyChartPatients.current.has(patient.id) && cached
+              ? { ...patient, teethChart: cached.teethChart }
+              : patient;
+          });
+          saveCustomers(merged);
+          return merged;
         });
       }
       if (apptsRes.status === 'fulfilled' && Array.isArray(apptsRes.value)) {
@@ -346,7 +353,11 @@ export default function App() {
   const handleUpdateChart = (updatedChart: TeethChartState) => {
     updateCurrentCustomer(() => ({ teethChart: updatedChart }));
     if (selectedCustomerId) {
-      apiClient.odontogram.bulkUpdate(selectedCustomerId, updatedChart).catch((err) => {
+      const patientId = selectedCustomerId;
+      dirtyChartPatients.current.add(patientId);
+      apiClient.odontogram.bulkUpdate(patientId, updatedChart).then(() => {
+        dirtyChartPatients.current.delete(patientId);
+      }).catch((err) => {
         console.warn('Odontogram backend note:', err.message);
       });
     }
