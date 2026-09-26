@@ -35,6 +35,9 @@ import {
   saveDeterminations,
   loadCurrentUser,
   saveCurrentUser,
+  loadLastTopLevelTab,
+  saveLastTopLevelTab,
+  TopLevelTab,
 } from './utils/storage';
 import { generateRecommendedServices, evaluateMaintenanceDues } from './utils/dentalRules';
 import { apiClient } from './services/apiClient';
@@ -51,6 +54,7 @@ import { LoginPage } from './components/LoginPage';
 import { ClinicManagementPortal } from './components/ClinicManagementPortal';
 import { AdminView } from './components/AdminView';
 import { BackendSettingsModal } from './components/BackendSettingsModal';
+import { ChartLoadingSkeleton } from './components/ChartLoadingSkeleton';
 import { Users, ArrowRight } from 'lucide-react';
 
 /**
@@ -116,16 +120,22 @@ export default function App() {
   const [consumables, setConsumables] = useState<ConsumableItem[]>(() => loadConsumables());
   const [determinations, setDeterminations] = useState<TreatmentDetermination[]>(() => loadDeterminations());
   const [selectedCustomerId, setSelCustId] = useState<string>(() => getSelectedCustomerId());
-  const [activeTab, setActiveTab] = useState<string>('calendar');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const savedTab = loadLastTopLevelTab();
+    const canAccessAdmin = currentUser?.permissions?.includes('admin_view') || currentUser?.role === 'admin';
+    return savedTab === 'admin' && !canAccessAdmin ? 'calendar' : savedTab;
+  });
   const [isPresentationOpen, setIsPresentationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Backend connection & modal state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [isPatientsLoading, setIsPatientsLoading] = useState(true);
   const [isBackendSettingsOpen, setIsBackendSettingsOpen] = useState(false);
 
   // Synchronize state with NestJS + Supabase REST API
   const syncWithBackend = useCallback(async () => {
+    setIsPatientsLoading(true);
     try {
       await apiClient.checkHealth();
       setIsBackendConnected(true);
@@ -142,8 +152,19 @@ export default function App() {
 
       if (patientsRes.status === 'fulfilled' && Array.isArray(patientsRes.value)) {
         const mapped = patientsRes.value.map(mapPatientToCustomer);
-        setCustomers(mapped);
-        saveCustomers(mapped);
+        setCustomers((previous) => {
+          // Keep the last known chart visible during a transient empty response.
+          if (mapped.length === 0 && previous.length > 0) return previous;
+
+          if (selectedCustomerId && mapped.length > 0 && !mapped.some((item) => item.id === selectedCustomerId)) {
+            const fallbackId = mapped[0].id;
+            setSelCustId(fallbackId);
+            setSelectedCustomerId(fallbackId);
+          }
+
+          saveCustomers(mapped);
+          return mapped;
+        });
       }
       if (apptsRes.status === 'fulfilled' && Array.isArray(apptsRes.value)) {
         setAppointments(apptsRes.value);
@@ -167,11 +188,15 @@ export default function App() {
       }
     } catch {
       setIsBackendConnected(false);
+    } finally {
+      setIsPatientsLoading(false);
     }
   }, []);
 
   // Initial sync & token expiration listener
   useEffect(() => {
+    if (!currentUser) return;
+
     syncWithBackend();
 
     // 7-day token expiration listener: prompt user to re-authenticate
@@ -184,7 +209,7 @@ export default function App() {
     return () => {
       unsubSession();
     };
-  }, [syncWithBackend]);
+  }, [currentUser, syncWithBackend]);
 
   // Real-time WebSocket Gateway listener
   useEffect(() => {
@@ -239,13 +264,27 @@ export default function App() {
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     saveCurrentUser(user);
-    syncWithBackend();
   };
 
   const handleLogout = () => {
     apiClient.auth.logout();
     setCurrentUser(null);
     saveCurrentUser(null);
+  };
+
+  const navigateToTab = (tab: string) => {
+    setActiveTab(tab);
+    if (
+      tab === 'calendar' ||
+      tab === 'customers' ||
+      tab === 'admin' ||
+      tab === 'odontogram' ||
+      tab === 'photography' ||
+      tab === 'treatments' ||
+      tab === 'recommended_services'
+    ) {
+      saveLastTopLevelTab(tab as TopLevelTab);
+    }
   };
 
   // Admin state save handlers + backend persistence
@@ -278,7 +317,7 @@ export default function App() {
     setSelCustId(id);
     setSelectedCustomerId(id);
     if (!id && activeTab !== 'calendar' && activeTab !== 'admin') {
-      setActiveTab('customers');
+      navigateToTab('customers');
     }
   };
 
@@ -643,7 +682,7 @@ export default function App() {
       {/* Left Navigation Sidebar */}
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={navigateToTab}
         customers={customers}
         appointments={appointments}
         isMobileOpen={isMobileMenuOpen}
@@ -657,7 +696,7 @@ export default function App() {
         {/* Top Header & Clinical Navigation */}
         <Header
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={navigateToTab}
           customers={customers}
           selectedCustomerId={selectedCustomerId}
           onSelectCustomer={handleSelectCustomer}
@@ -688,9 +727,9 @@ export default function App() {
                 onCompleteClinicalSession={handleCompleteClinicalSession}
                 onNavigateToCustomer={(custId) => {
                   handleSelectCustomer(custId);
-                  setActiveTab('customers');
+                  navigateToTab('customers');
                 }}
-                onNavigateToPhotos={() => setActiveTab('photography')}
+                onNavigateToPhotos={() => navigateToTab('photography')}
               />
             )}
 
@@ -701,6 +740,7 @@ export default function App() {
                 selectedCustomerId={selectedCustomerId}
                 appointments={appointments}
                 determinations={determinations}
+                isPatientsLoading={isPatientsLoading}
                 onSelectCustomer={handleSelectCustomer}
                 onAddNewCustomer={handleAddNewCustomer}
                 onUpdateAttachedFiles={handleUpdateAttachedFiles}
@@ -712,7 +752,7 @@ export default function App() {
                 onSaveBeforeAfterPair={handleSaveBeforeAfterPair}
                 onUpdateBeforeAfterPairs={handleUpdateBeforeAfterPairs}
                 onOpenPresentation={() => setIsPresentationOpen(true)}
-                onNavigateToTab={setActiveTab}
+                onNavigateToTab={navigateToTab}
                 onUpdateChart={handleUpdateChart}
               />
             )}
@@ -736,11 +776,15 @@ export default function App() {
               activeCustomer ? (
                 <>
                   {activeTab === 'odontogram' && (
-                    <Odontogram
-                      customer={activeCustomer}
-                      onUpdateChart={handleUpdateChart}
-                      onSaveSnapshot={handleSaveSnapshot}
-                    />
+                    isPatientsLoading ? (
+                      <ChartLoadingSkeleton />
+                    ) : (
+                      <Odontogram
+                        customer={activeCustomer}
+                        onUpdateChart={handleUpdateChart}
+                        onSaveSnapshot={handleSaveSnapshot}
+                      />
+                    )
                   )}
 
                   {activeTab === 'photography' && (
@@ -782,7 +826,7 @@ export default function App() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('customers')}
+                    onClick={() => navigateToTab('customers')}
                     className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors inline-flex items-center gap-2 cursor-pointer"
                   >
                     <span>Go to Patient Selection</span>

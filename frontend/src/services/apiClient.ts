@@ -12,8 +12,7 @@ export interface AuthTokens {
 export type SessionExpiredListener = () => void;
 
 class ApiClient {
-  private isRefreshing = false;
-  private refreshSubscribers: ((token: string) => void)[] = [];
+  private refreshPromise: Promise<string> | null = null;
   private sessionExpiredListeners: SessionExpiredListener[] = [];
 
   public getBaseUrl(): string {
@@ -63,13 +62,25 @@ class ApiClient {
     localStorage.removeItem('dentalsuite_current_user');
   }
 
-  private onTokenRefreshed(token: string) {
-    this.refreshSubscribers.forEach((callback) => callback(token));
-    this.refreshSubscribers = [];
-  }
+  private async refreshAccessToken(baseUrl: string, refreshToken: string): Promise<string> {
+    const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
 
-  private addRefreshSubscriber(callback: (token: string) => void) {
-    this.refreshSubscribers.push(callback);
+    if (!refreshRes.ok) {
+      throw new Error('7-Day Refresh Token has expired. Please sign in again.');
+    }
+
+    const refreshData = await refreshRes.json();
+    const newTokens: AuthTokens = {
+      accessToken: refreshData.accessToken,
+      refreshToken: refreshData.refreshToken,
+      expiresIn: refreshData.expiresIn || 900,
+    };
+    this.setTokens(newTokens);
+    return newTokens.accessToken;
   }
 
   /**
@@ -105,62 +116,24 @@ class ApiClient {
         throw new Error('Session expired (no refresh token). Please log in again.');
       }
 
-      if (!this.isRefreshing) {
-        this.isRefreshing = true;
-        try {
-          const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
-
-          if (!refreshRes.ok) {
-            this.isRefreshing = false;
-            this.notifySessionExpired();
-            throw new Error('7-Day Refresh Token has expired. Please sign in again.');
-          }
-
-          const refreshData = await refreshRes.json();
-          const newTokens: AuthTokens = {
-            accessToken: refreshData.accessToken,
-            refreshToken: refreshData.refreshToken,
-            expiresIn: refreshData.expiresIn || 900,
-          };
-          this.setTokens(newTokens);
-          this.isRefreshing = false;
-          this.onTokenRefreshed(newTokens.accessToken);
-
-          // Retry initial request with new access token
-          headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
-          const retryRes = await fetch(url, { ...options, headers });
-          if (!retryRes.ok) {
-            const err = await retryRes.json().catch(() => ({}));
-            throw new Error(err.message || `Request failed (${retryRes.status})`);
-          }
-          return retryRes.json();
-        } catch (err) {
-          this.isRefreshing = false;
-          this.notifySessionExpired();
-          throw err;
-        }
-      } else {
-        // Wait for existing refresh to complete
-        return new Promise((resolve, reject) => {
-          this.addRefreshSubscriber(async (newToken) => {
-            try {
-              headers['Authorization'] = `Bearer ${newToken}`;
-              const retryRes = await fetch(url, { ...options, headers });
-              if (!retryRes.ok) {
-                const err = await retryRes.json().catch(() => ({}));
-                reject(new Error(err.message || `Request failed (${retryRes.status})`));
-              } else {
-                resolve(await retryRes.json());
-              }
-            } catch (err) {
-              reject(err);
-            }
-          });
+      if (!this.refreshPromise) {
+        this.refreshPromise = this.refreshAccessToken(baseUrl, refreshToken).finally(() => {
+          this.refreshPromise = null;
         });
+      }
+
+      try {
+        const newToken = await this.refreshPromise;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        const retryRes = await fetch(url, { ...options, headers });
+        if (!retryRes.ok) {
+          const err = await retryRes.json().catch(() => ({}));
+          throw new Error(err.message || `Request failed (${retryRes.status})`);
+        }
+        return retryRes.json();
+      } catch (err) {
+        this.notifySessionExpired();
+        throw err;
       }
     }
 

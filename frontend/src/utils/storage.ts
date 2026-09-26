@@ -18,6 +18,42 @@ const SHIFTS_STORAGE_KEY = 'dental_suite_shifts_v1';
 const CONSUMABLES_STORAGE_KEY = 'dental_suite_consumables_v1';
 const DETERMINATIONS_STORAGE_KEY = 'dental_suite_determinations_v2';
 const AUTH_USER_KEY = 'dental_suite_auth_user_v1';
+const LAST_TOP_LEVEL_TAB_KEY = 'dental_suite_last_top_level_tab_v1';
+
+export type TopLevelTab =
+  | 'calendar'
+  | 'customers'
+  | 'admin'
+  | 'odontogram'
+  | 'photography'
+  | 'treatments'
+  | 'recommended_services';
+
+export function loadLastTopLevelTab(): TopLevelTab {
+  try {
+    const stored = localStorage.getItem(LAST_TOP_LEVEL_TAB_KEY);
+    const validTabs: TopLevelTab[] = [
+      'calendar',
+      'customers',
+      'admin',
+      'odontogram',
+      'photography',
+      'treatments',
+      'recommended_services',
+    ];
+    return validTabs.includes(stored as TopLevelTab) ? (stored as TopLevelTab) : 'calendar';
+  } catch {
+    return 'calendar';
+  }
+}
+
+export function saveLastTopLevelTab(tab: TopLevelTab): void {
+  try {
+    localStorage.setItem(LAST_TOP_LEVEL_TAB_KEY, tab);
+  } catch {
+    // Navigation remains usable when browser storage is unavailable.
+  }
+}
 
 export function loadCustomers(): Customer[] {
   try {
