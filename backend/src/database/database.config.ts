@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import { ClinicEntity } from '../clinics/entities/clinic.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { RefreshTokenEntity } from '../auth/entities/refresh-token.entity';
 import { PatientEntity } from '../patients/entities/patient.entity';
@@ -25,6 +26,7 @@ export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOpt
   const logging = configService.get<string>('TYPEORM_LOGGING', 'false') === 'true';
 
   const entities = [
+    ClinicEntity,
     UserEntity,
     RefreshTokenEntity,
     PatientEntity,

@@ -22,19 +22,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
+    const exceptionResponse =
       exception instanceof HttpException
         ? exception.getResponse()
-        : 'Internal server error';
+        : null;
+
+    let message: string | object = 'Internal server error occurred';
+
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(
+        `[${request.method}] ${request.url} - Internal Server Error: ${
+          exception instanceof Error ? exception.message : 'Unknown exception'
+        }`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+      message = 'An unexpected clinical server error occurred. Please contact clinic technical operations.';
+    } else if (exceptionResponse) {
+      message = exceptionResponse;
+    }
 
     const errorDetails = typeof message === 'object' ? message : { message };
-
-    this.logger.error(
-      `[${request.method}] ${request.url} - Status: ${status} - Error: ${JSON.stringify(
-        errorDetails,
-      )}`,
-      exception instanceof Error ? exception.stack : undefined,
-    );
 
     response.status(status).json({
       success: false,

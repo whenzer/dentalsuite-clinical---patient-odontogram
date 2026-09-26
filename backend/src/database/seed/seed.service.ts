@@ -46,21 +46,17 @@ export class SeedService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    const autoSeed = this.configService.get<string>('AUTO_SEED_DATA', 'true') === 'true';
+    const autoSeed = this.configService.get<string>('AUTO_SEED_DATA', 'false') === 'true';
     if (autoSeed) {
       await this.seedAll();
     }
   }
 
   async seedAll() {
-    this.logger.log('Checking database seed state...');
-    await this.seedUsers();
-    await this.seedChairs();
-    await this.seedShifts();
-    await this.seedConsumables();
+    this.logger.log('Checking database seed state (production mode)...');
+    // Only seed standard determination categories if none exist, no sample users or sample patients
     await this.seedDeterminations();
-    await this.seedInitialPatients();
-    this.logger.log('Database seeding check complete.');
+    this.logger.log('Database seeding check complete (zero sample data).');
   }
 
   private async seedUsers() {

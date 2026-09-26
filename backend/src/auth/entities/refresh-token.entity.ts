@@ -18,14 +18,21 @@ export class RefreshTokenEntity {
   @Column({ type: 'varchar', length: 255 })
   tokenHash: string;
 
-  @Column({ type: 'uuid' })
-  userId: string;
+  @Column({ type: 'uuid', nullable: true })
+  userId?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  clinicId?: string;
+
+  @Column({ type: 'varchar', length: 50, default: 'staff' })
+  accountType: 'staff' | 'clinic';
 
   @ManyToOne(() => UserEntity, (user) => user.refreshTokens, {
     onDelete: 'CASCADE',
+    nullable: true,
   })
   @JoinColumn({ name: 'userId' })
-  user: UserEntity;
+  user?: UserEntity;
 
   @Column({ type: 'timestamptz' })
   expiresAt: Date;
@@ -45,3 +52,4 @@ export class RefreshTokenEntity {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }
+

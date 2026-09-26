@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './database.config';
 import { SeedService } from './seed/seed.service';
+import { ClinicEntity } from '../clinics/entities/clinic.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { DentalChairEntity } from '../clinic-admin/entities/dental-chair.entity';
 import { StaffShiftEntity } from '../clinic-admin/entities/staff-shift.entity';
@@ -21,6 +22,7 @@ import { RulesModule } from '../rules/rules.module';
       useFactory: (configService: ConfigService) => getTypeOrmConfig(configService),
     }),
     TypeOrmModule.forFeature([
+      ClinicEntity,
       UserEntity,
       DentalChairEntity,
       StaffShiftEntity,

@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterClinicDto, LoginClinicDto, LoginStaffDto } from './dto/clinic-auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -20,20 +21,56 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
+  /**
+   * Clinic Registration: Only clinic registration is open publicly
+   */
+  @Post('clinic/register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() dto: RegisterDto, @Req() req: Request) {
+  async registerClinic(@Body() dto: RegisterClinicDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
-    return this.authService.register(dto, ipAddress, userAgent);
+    return this.authService.registerClinic(dto, ipAddress, userAgent);
   }
 
+  /**
+   * Clinic Login: Sign into clinic management portal
+   */
+  @Post('clinic/login')
+  @HttpCode(HttpStatus.OK)
+  async loginClinic(@Body() dto: LoginClinicDto, @Req() req: Request) {
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.loginClinic(dto, ipAddress, userAgent);
+  }
+
+  /**
+   * Staff Login: Sign into the main clinical suite
+   */
+  @Post('staff/login')
+  @HttpCode(HttpStatus.OK)
+  async loginStaff(@Body() dto: LoginStaffDto, @Req() req: Request) {
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.loginStaff(dto, ipAddress, userAgent);
+  }
+
+  /**
+   * Universal Login endpoint (backwards compatible)
+   */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
     return this.authService.login(dto, ipAddress, userAgent);
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() dto: RegisterDto, @Req() req: Request) {
+    const ipAddress = req.ip || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return this.authService.register(dto, ipAddress, userAgent);
   }
 
   @Post('refresh')

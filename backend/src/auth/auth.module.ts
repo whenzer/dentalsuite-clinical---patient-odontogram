@@ -7,12 +7,13 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UserEntity } from '../users/entities/user.entity';
+import { ClinicEntity } from '../clinics/entities/clinic.entity';
 import { RefreshTokenEntity } from './entities/refresh-token.entity';
 import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity, RefreshTokenEntity]),
+    TypeOrmModule.forFeature([ClinicEntity, UserEntity, RefreshTokenEntity]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
