@@ -3,50 +3,40 @@
  * Connects to NestJS ClinicalGateway for multi-operatory synchronization
  */
 
+import { io, Socket } from 'socket.io-client';
+import { apiClient } from './apiClient';
+
 export type RealtimeCallback = (data: any) => void;
 
 class RealtimeSocketClient {
   private listeners: Map<string, RealtimeCallback[]> = new Map();
-  private ws: WebSocket | null = null;
+  private socket: Socket | null = null;
   private isConnected = false;
 
   connect(wsUrl?: string) {
-    if (this.ws && this.isConnected) return;
+    if (this.socket?.connected) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const defaultUrl = `${protocol}//${window.location.host}/socket.io/?EIO=4&transport=websocket`;
-    const targetUrl = wsUrl || defaultUrl;
+    const apiUrl = wsUrl || apiClient.getBaseUrl();
+    const socketUrl = apiUrl.startsWith('http')
+      ? apiUrl.replace(/\/api\/v1\/?$/, '')
+      : window.location.origin;
 
-    try {
-      this.ws = new WebSocket(targetUrl);
+    this.socket = io(socketUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+    });
 
-      this.ws.onopen = () => {
-        this.isConnected = true;
-      };
+    this.socket.on('connect', () => {
+      this.isConnected = true;
+    });
 
-      this.ws.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.event && this.listeners.has(payload.event)) {
-            this.listeners.get(payload.event)?.forEach((cb) => cb(payload.data));
-          }
-        } catch {
-          // Non-JSON or protocol heartbeat
-        }
-      };
+    this.socket.on('disconnect', () => {
+      this.isConnected = false;
+    });
 
-      this.ws.onclose = () => {
-        this.isConnected = false;
-        // Auto-reconnect after 3 seconds
-        setTimeout(() => this.connect(wsUrl), 3000);
-      };
-
-      this.ws.onerror = () => {
-        this.ws?.close();
-      };
-    } catch {
-      // In dev without backend running, fail silently
-    }
+    this.listeners.forEach((callbacks, event) => {
+      callbacks.forEach((callback) => this.socket?.on(event, callback));
+    });
   }
 
   on(event: string, callback: RealtimeCallback) {
@@ -54,6 +44,7 @@ class RealtimeSocketClient {
       this.listeners.set(event, []);
     }
     this.listeners.get(event)!.push(callback);
+    this.socket?.on(event, callback);
     return () => this.off(event, callback);
   }
 
@@ -64,6 +55,7 @@ class RealtimeSocketClient {
       event,
       list.filter((cb) => cb !== callback),
     );
+    this.socket?.off(event, callback);
   }
 }
 
