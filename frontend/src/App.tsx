@@ -130,6 +130,7 @@ export default function App() {
   // Backend connection & modal state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const dirtyChartPatients = useRef(new Set<string>());
+  const chartWriteQueues = useRef(new Map<string, Promise<void>>());
   const [isBackendSettingsOpen, setIsBackendSettingsOpen] = useState(false);
 
   // Synchronize state with NestJS + Supabase REST API
@@ -351,14 +352,33 @@ export default function App() {
 
   // Handlers
   const handleUpdateChart = (updatedChart: TeethChartState) => {
+    const patientId = selectedCustomerId;
+    const currentCustomer = patientId ? customers.find((customer) => customer.id === patientId) : undefined;
+    const previousChart = currentCustomer?.teethChart || {};
+    const changedTeeth = Object.keys(updatedChart)
+      .map(Number)
+      .filter((number) => JSON.stringify(previousChart[number]) !== JSON.stringify(updatedChart[number]))
+      .map((number) => updatedChart[number]);
+
     updateCurrentCustomer(() => ({ teethChart: updatedChart }));
-    if (selectedCustomerId) {
-      const patientId = selectedCustomerId;
+    if (patientId && changedTeeth.length > 0) {
       dirtyChartPatients.current.add(patientId);
-      apiClient.odontogram.bulkUpdate(patientId, updatedChart).then(() => {
-        dirtyChartPatients.current.delete(patientId);
-      }).catch((err) => {
+      const previousWrite = chartWriteQueues.current.get(patientId) || Promise.resolve();
+      const nextWrite = previousWrite
+        .catch(() => undefined)
+        .then(async () => {
+          for (const tooth of changedTeeth) {
+            await apiClient.odontogram.updateTooth(patientId, tooth);
+          }
+        });
+      chartWriteQueues.current.set(patientId, nextWrite);
+      nextWrite.catch((err) => {
         console.warn('Odontogram backend note:', err.message);
+      }).finally(() => {
+        if (chartWriteQueues.current.get(patientId) === nextWrite) {
+          chartWriteQueues.current.delete(patientId);
+          dirtyChartPatients.current.delete(patientId);
+        }
       });
     }
   };
