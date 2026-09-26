@@ -52,6 +52,8 @@ export interface HeaderProps {
   onNewTreatment?: () => void;
   currentUser?: AuthUser | null;
   onLogout?: () => void;
+  isBackendConnected?: boolean;
+  onOpenBackendSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -64,6 +66,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   currentUser,
   onLogout,
+  isBackendConnected = false,
+  onOpenBackendSettings,
 }) => {
   const selectedCustomer = selectedCustomerId
     ? customers.find((c) => c.id === selectedCustomerId)
@@ -142,6 +146,24 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Zone: Profile / Session Status indicator + Logout */}
         <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          {onOpenBackendSettings && (
+            <button
+              type="button"
+              onClick={onOpenBackendSettings}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer border-slate-200 hover:border-sky-300 bg-slate-50 hover:bg-sky-50/50 text-slate-700 shadow-2xs"
+              title="Cloud Database & REST API Status"
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isBackendConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
+                }`}
+              />
+              <span className="text-[11px] font-semibold">
+                {isBackendConnected ? 'Supabase Live' : 'Local Cache'}
+              </span>
+            </button>
+          )}
+
           <div className="text-right hidden sm:block">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               {currentUser?.title || 'Clinic Director'}

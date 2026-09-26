@@ -1,0 +1,33 @@
+# fly.toml - DentalSuite Production Fly.io Configuration
+# Launch with: fly launch / fly deploy
+
+app = "dentalsuite-backend"
+primary_region = "sin" # Singapore / Asia East (adjust to your preferred region, e.g. iad, lax, nrt)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false # Dental suite benefits from always-warm machines for instant clinical response
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  path = "/api/v1/health"
+  protocol = "http"
+  timeout = "5s"

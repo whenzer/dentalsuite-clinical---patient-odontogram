@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Customer,
   DentalPhoto,
@@ -37,6 +37,8 @@ import {
   saveCurrentUser,
 } from './utils/storage';
 import { generateRecommendedServices, evaluateMaintenanceDues } from './utils/dentalRules';
+import { apiClient } from './services/apiClient';
+import { realtimeClient } from './services/socketClient';
 import { Sidebar, Header } from './components/Navbar';
 import { CustomerManagement } from './components/CustomerManagement';
 import { Odontogram } from './components/Odontogram';
@@ -47,7 +49,62 @@ import { PatientPresentationView } from './components/PatientPresentationView';
 import { CalendarView } from './components/CalendarView';
 import { LoginPage } from './components/LoginPage';
 import { AdminView } from './components/AdminView';
+import { BackendSettingsModal } from './components/BackendSettingsModal';
 import { Users, ArrowRight } from 'lucide-react';
+
+/**
+ * Normalizes backend PatientEntity to frontend Customer model
+ */
+function mapPatientToCustomer(p: any): Customer {
+  const chart: TeethChartState = {};
+  for (let i = 1; i <= 32; i++) {
+    const t = (p.teeth || []).find((rec: any) => rec.toothNumber === i);
+    if (t) {
+      chart[i] = {
+        number: t.toothNumber,
+        condition: t.condition,
+        surfaces: t.surfaces || [],
+        notes: t.notes,
+        mobility: t.mobility,
+        pocketDepthMm: t.pocketDepthMm,
+        lastTreatedDate: t.lastTreatedDate,
+        surfaceColors: t.surfaceColors,
+      };
+    } else {
+      chart[i] = {
+        number: i,
+        condition: 'healthy',
+        surfaces: [],
+        mobility: 0,
+        pocketDepthMm: 2,
+      };
+    }
+  }
+
+  return {
+    id: p.id,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    dob: p.dob,
+    gender: p.gender,
+    phone: p.phone,
+    email: p.email,
+    avatarUrl: p.avatarUrl,
+    registeredDate: p.registeredDate,
+    medicalAlerts: p.medicalAlerts || [],
+    allergies: p.allergies || [],
+    insuranceProvider: p.insuranceProvider,
+    emergencyContact: p.emergencyContact,
+    teethChart: chart,
+    teethSnapshots: p.teethSnapshots || [],
+    photos: p.photos || [],
+    beforeAfterPairs: p.beforeAfterPairs || [],
+    treatmentLogs: p.treatmentLogs || [],
+    cleaningDues: p.cleaningDues || [],
+    recommendedServices: p.recommendedServices || [],
+    attachedFiles: p.attachedFiles || [],
+  };
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => loadCurrentUser());
@@ -62,36 +119,155 @@ export default function App() {
   const [isPresentationOpen, setIsPresentationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Backend connection & modal state
+  const [isBackendConnected, setIsBackendConnected] = useState(false);
+  const [isBackendSettingsOpen, setIsBackendSettingsOpen] = useState(false);
+
+  // Synchronize state with NestJS + Supabase REST API
+  const syncWithBackend = useCallback(async () => {
+    try {
+      await apiClient.checkHealth();
+      setIsBackendConnected(true);
+
+      const [patientsRes, apptsRes, chairsRes, shiftsRes, consumablesRes, detsRes] =
+        await Promise.allSettled([
+          apiClient.patients.getAll(),
+          apiClient.appointments.getAll(),
+          apiClient.admin.getChairs(),
+          apiClient.admin.getShifts(),
+          apiClient.admin.getConsumables(),
+          apiClient.admin.getDeterminations(),
+        ]);
+
+      if (patientsRes.status === 'fulfilled' && patientsRes.value && patientsRes.value.length > 0) {
+        const mapped = patientsRes.value.map(mapPatientToCustomer);
+        setCustomers(mapped);
+        saveCustomers(mapped);
+      }
+      if (apptsRes.status === 'fulfilled' && apptsRes.value && apptsRes.value.length > 0) {
+        setAppointments(apptsRes.value);
+        saveAppointments(apptsRes.value);
+      }
+      if (chairsRes.status === 'fulfilled' && chairsRes.value && chairsRes.value.length > 0) {
+        setChairs(chairsRes.value);
+        saveChairs(chairsRes.value);
+      }
+      if (shiftsRes.status === 'fulfilled' && shiftsRes.value && shiftsRes.value.length > 0) {
+        setShifts(shiftsRes.value);
+        saveShifts(shiftsRes.value);
+      }
+      if (consumablesRes.status === 'fulfilled' && consumablesRes.value && consumablesRes.value.length > 0) {
+        setConsumables(consumablesRes.value);
+        saveConsumables(consumablesRes.value);
+      }
+      if (detsRes.status === 'fulfilled' && detsRes.value && detsRes.value.length > 0) {
+        setDeterminations(detsRes.value);
+        saveDeterminations(detsRes.value);
+      }
+    } catch {
+      setIsBackendConnected(false);
+    }
+  }, []);
+
+  // Initial sync & token expiration listener
+  useEffect(() => {
+    syncWithBackend();
+
+    // 7-day token expiration listener: prompt user to re-authenticate
+    const unsubSession = apiClient.onSessionExpired(() => {
+      console.warn('Session expired. Prompting login.');
+      setCurrentUser(null);
+      saveCurrentUser(null);
+    });
+
+    return () => {
+      unsubSession();
+    };
+  }, [syncWithBackend]);
+
+  // Real-time WebSocket Gateway listener
+  useEffect(() => {
+    realtimeClient.connect();
+
+    // 1. Live Odontogram updates from other clinical stations
+    const unsubOdonto = realtimeClient.on('odontogram:updated', ({ patientId, chart }: any) => {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === patientId ? { ...c, teethChart: chart } : c))
+      );
+    });
+
+    // 2. Live Appointment updates
+    const unsubApptCreated = realtimeClient.on('appointment:created', ({ appointment }: any) => {
+      setAppointments((prev) => {
+        if (prev.some((a) => a.id === appointment.id)) return prev;
+        return [appointment, ...prev];
+      });
+    });
+
+    const unsubApptUpdated = realtimeClient.on('appointment:updated', ({ appointment }: any) => {
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointment.id ? appointment : a))
+      );
+    });
+
+    const unsubApptStatus = realtimeClient.on('appointment:status_changed', ({ appointment }: any) => {
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === appointment.id ? appointment : a))
+      );
+    });
+
+    // 3. Live Chair status changes
+    const unsubChair = realtimeClient.on('chair:status_changed', ({ chairId, status, chair }: any) => {
+      setChairs((prev) =>
+        prev.map((c) => (c.id === chairId ? { ...c, status, ...chair } : c))
+      );
+    });
+
+    return () => {
+      unsubOdonto();
+      unsubApptCreated();
+      unsubApptUpdated();
+      unsubApptStatus();
+      unsubChair();
+    };
+  }, []);
+
   // Authentication handlers
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     saveCurrentUser(user);
+    syncWithBackend();
   };
 
   const handleLogout = () => {
+    apiClient.auth.logout();
     setCurrentUser(null);
     saveCurrentUser(null);
   };
 
-  // Admin state save handlers
+  // Admin state save handlers + backend persistence
   const handleSaveChairs = (newChairs: DentalChair[]) => {
     setChairs(newChairs);
     saveChairs(newChairs);
+    apiClient.admin.saveChairs(newChairs).catch((err) => console.warn('Chairs sync note:', err.message));
   };
 
   const handleSaveShifts = (newShifts: StaffShift[]) => {
     setShifts(newShifts);
     saveShifts(newShifts);
+    apiClient.admin.saveShifts(newShifts).catch((err) => console.warn('Shifts sync note:', err.message));
   };
 
   const handleSaveConsumables = (newConsumables: ConsumableItem[]) => {
     setConsumables(newConsumables);
     saveConsumables(newConsumables);
+    apiClient.admin.saveConsumables(newConsumables).catch((err) => console.warn('Consumables sync note:', err.message));
   };
 
   const handleSaveDeterminations = (newDets: TreatmentDetermination[]) => {
     setDeterminations(newDets);
     saveDeterminations(newDets);
+    apiClient.admin.saveDeterminations(newDets).catch((err) => console.warn('Determinations sync note:', err.message));
   };
 
   // Sync selected customer in storage
@@ -132,18 +308,33 @@ export default function App() {
   // Handlers
   const handleUpdateChart = (updatedChart: TeethChartState) => {
     updateCurrentCustomer(() => ({ teethChart: updatedChart }));
+    if (selectedCustomerId) {
+      apiClient.odontogram.bulkUpdate(selectedCustomerId, updatedChart).catch((err) => {
+        console.warn('Odontogram backend note:', err.message);
+      });
+    }
   };
 
   const handleSaveSnapshot = (snapshot: TeethSnapshot) => {
     updateCurrentCustomer((c) => ({
       teethSnapshots: [...(c.teethSnapshots || []), snapshot],
     }));
+    if (selectedCustomerId) {
+      apiClient.odontogram
+        .createSnapshot(selectedCustomerId, snapshot.visitTitle, snapshot.notes)
+        .catch((err) => console.warn('Snapshot backend note:', err.message));
+    }
   };
 
   const handleSavePhoto = (photo: DentalPhoto) => {
     updateCurrentCustomer((c) => ({
       photos: [photo, ...(c.photos || [])],
     }));
+    if (selectedCustomerId) {
+      apiClient.patients
+        .addPhoto(selectedCustomerId, photo)
+        .catch((err) => console.warn('Photo backend note:', err.message));
+    }
   };
 
   const handleDeletePhoto = (photoId: string) => {
@@ -153,12 +344,18 @@ export default function App() {
         (ba) => ba.beforePhotoId !== photoId && ba.afterPhotoId !== photoId
       ),
     }));
+    apiClient.patients.deletePhoto(photoId).catch((err) => console.warn('Photo delete note:', err.message));
   };
 
   const handleSaveBeforeAfterPair = (pair: BeforeAfterPair) => {
     updateCurrentCustomer((c) => ({
       beforeAfterPairs: [pair, ...(c.beforeAfterPairs || [])],
     }));
+    if (selectedCustomerId) {
+      apiClient.patients
+        .addBeforeAfterPair(selectedCustomerId, pair)
+        .catch((err) => console.warn('Pair backend note:', err.message));
+    }
   };
 
   const handleUpdateBeforeAfterPairs = (pairs: BeforeAfterPair[]) => {
@@ -171,12 +368,19 @@ export default function App() {
     updateCurrentCustomer((c) => ({
       treatmentLogs: [log, ...(c.treatmentLogs || [])],
     }));
+    apiClient.treatments.create(log).catch((err) => console.warn('Treatment backend note:', err.message));
   };
 
   const handleUpdateCleaningDues = (dues: MaintenanceDue[]) => {
+    const evaluated = evaluateMaintenanceDues(dues);
     updateCurrentCustomer(() => ({
-      cleaningDues: evaluateMaintenanceDues(dues),
+      cleaningDues: evaluated,
     }));
+    if (selectedCustomerId) {
+      apiClient.odontogram
+        .updateMaintenanceDues(selectedCustomerId, evaluated)
+        .catch((err) => console.warn('Cleaning dues backend note:', err.message));
+    }
   };
 
   const handleUpdateRecommendations = (recs: RecommendedService[]) => {
@@ -196,6 +400,22 @@ export default function App() {
     setCustomers(updated);
     saveCustomers(updated);
     handleSelectCustomer(newCustomer.id);
+
+    apiClient.patients
+      .create({
+        firstName: newCustomer.firstName,
+        lastName: newCustomer.lastName,
+        dob: newCustomer.dob,
+        gender: newCustomer.gender,
+        phone: newCustomer.phone,
+        email: newCustomer.email,
+        avatarUrl: newCustomer.avatarUrl,
+        medicalAlerts: newCustomer.medicalAlerts,
+        allergies: newCustomer.allergies,
+        insuranceProvider: newCustomer.insuranceProvider,
+        emergencyContact: newCustomer.emergencyContact,
+      })
+      .catch((err) => console.warn('Patient create backend note:', err.message));
   };
 
   // Appointment & Scheduling Handlers
@@ -211,6 +431,22 @@ export default function App() {
       saveAppointments(updated);
       return updated;
     });
+
+    if (isReschedule) {
+      apiClient.appointments
+        .reschedule(
+          appointment.id,
+          appointment.date,
+          appointment.startTime,
+          appointment.durationMinutes
+        )
+        .catch((err) => console.warn('Appointment reschedule note:', err.message));
+    } else {
+      apiClient.appointments
+        .create(appointment)
+        .catch(() => apiClient.appointments.update(appointment.id, appointment))
+        .catch((err) => console.warn('Appointment create note:', err.message));
+    }
   };
 
   const handleCancelAppointment = (apptId: string, reason: string) => {
@@ -239,6 +475,10 @@ export default function App() {
       saveAppointments(updated);
       return updated;
     });
+
+    apiClient.appointments
+      .updateStatus(apptId, 'cancelled', reason)
+      .catch((err) => console.warn('Appointment cancel note:', err.message));
   };
 
   const handleUpdateAppointmentStatus = (apptId: string, status: Appointment['status']) => {
@@ -247,6 +487,10 @@ export default function App() {
       saveAppointments(updated);
       return updated;
     });
+
+    apiClient.appointments
+      .updateStatus(apptId, status)
+      .catch((err) => console.warn('Appointment status note:', err.message));
   };
 
   const handleAddReminderLog = (apptId: string, log: AppointmentReminderLog) => {
@@ -269,6 +513,10 @@ export default function App() {
       saveAppointments(updated);
       return updated;
     });
+
+    apiClient.appointments
+      .update(apptId, { automatedRemindersEnabled: enabled })
+      .catch((err) => console.warn('Reminders toggle note:', err.message));
   };
 
   // Complete clinical session: updates appointment to completed, logs treatment, saves photos & before/after pair to customer
@@ -296,6 +544,10 @@ export default function App() {
       return updated;
     });
 
+    apiClient.appointments
+      .updateStatus(data.appointmentId, 'completed')
+      .catch((err) => console.warn('Appointment complete note:', err.message));
+
     // 2. Update the patient record
     setCustomers((prevCustomers) => {
       const updated = prevCustomers.map((cust) => {
@@ -319,7 +571,7 @@ export default function App() {
                   ...d,
                   lastCompletedDate: data.completedAt,
                   status: 'up_to_date' as const,
-                  nextDueDate: '2027-03-03', // 6 months recall
+                  nextDueDate: '2027-03-03',
                 };
               }
               return d;
@@ -349,6 +601,10 @@ export default function App() {
 
       saveCustomers(updated);
       return updated;
+    });
+
+    apiClient.treatments.create(data.treatmentLog).catch((err) => {
+      console.warn('Treatment create note:', err.message);
     });
   };
 
@@ -398,6 +654,8 @@ export default function App() {
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           currentUser={currentUser}
           onLogout={handleLogout}
+          isBackendConnected={isBackendConnected}
+          onOpenBackendSettings={() => setIsBackendSettingsOpen(true)}
         />
 
         {/* Scrollable Main Content Canvas */}
@@ -461,17 +719,15 @@ export default function App() {
               />
             )}
 
-            {/* Tabs requiring an active selected patient */}
+            {/* Patient Context Dependent Views */}
             {activeTab !== 'calendar' && activeTab !== 'customers' && activeTab !== 'admin' && (
               activeCustomer ? (
                 <>
-                  {activeTab === 'teeth_chart' && (
+                  {activeTab === 'odontogram' && (
                     <Odontogram
                       customer={activeCustomer}
                       onUpdateChart={handleUpdateChart}
                       onSaveSnapshot={handleSaveSnapshot}
-                      onOpenPresentation={() => setIsPresentationOpen(true)}
-                      onNavigateToPhotos={() => setActiveTab('photography')}
                     />
                   )}
 
@@ -481,12 +737,14 @@ export default function App() {
                       onSavePhoto={handleSavePhoto}
                       onDeletePhoto={handleDeletePhoto}
                       onSaveBeforeAfterPair={handleSaveBeforeAfterPair}
+                      onUpdateBeforeAfterPairs={handleUpdateBeforeAfterPairs}
                     />
                   )}
 
-                  {activeTab === 'treatment_logs' && (
+                  {activeTab === 'treatments' && (
                     <TreatmentLogsView
                       customer={activeCustomer}
+                      determinations={determinations}
                       onAddTreatmentLog={handleAddTreatmentLog}
                       onUpdateCleaningDues={handleUpdateCleaningDues}
                     />
@@ -513,7 +771,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setActiveTab('customers')}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors inline-flex items-center gap-2"
+                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors inline-flex items-center gap-2 cursor-pointer"
                   >
                     <span>Go to Patient Selection</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -532,7 +790,14 @@ export default function App() {
           onClose={() => setIsPresentationOpen(false)}
         />
       )}
+
+      {/* Backend & Cloud Database Settings Modal */}
+      <BackendSettingsModal
+        isOpen={isBackendSettingsOpen}
+        onClose={() => setIsBackendSettingsOpen(false)}
+        onSyncTrigger={syncWithBackend}
+        isConnected={isBackendConnected}
+      />
     </div>
   );
 }
-
