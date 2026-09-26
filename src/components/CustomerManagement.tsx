@@ -79,6 +79,7 @@ interface CustomerManagementProps {
   onOpenPresentation?: () => void;
   onNavigateToTab?: (tab: string) => void;
   onUpdateChart?: (updatedChart: TeethChartState) => void;
+  onSaveChart?: (updatedChart: TeethChartState) => Promise<void>;
 }
 
 export type PatientTab =
@@ -107,6 +108,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   onOpenPresentation,
   onNavigateToTab,
   onUpdateChart,
+  onSaveChart,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<
@@ -1512,6 +1514,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
           <DentalChartingTab
             customer={selectedCustomer}
             onUpdateChart={onUpdateChart}
+            onSaveChart={onSaveChart}
           />
         </div>
       )}

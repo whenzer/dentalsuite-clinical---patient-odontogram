@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Customer, ToothNumber, ToothData, TeethChartState, ToothCondition } from '../types';
 import {
   Sparkles,
@@ -13,11 +13,13 @@ import {
   AlertCircle,
   Stethoscope,
   Smile,
+  Save,
 } from 'lucide-react';
 
 export interface DentalChartingTabProps {
   customer: Customer;
   onUpdateChart?: (updatedChart: TeethChartState) => void;
+  onSaveChart?: (updatedChart: TeethChartState) => Promise<void>;
 }
 
 export interface ColorSchemeItem {
@@ -179,6 +181,7 @@ type SegmentKey = 'top' | 'right' | 'bottom' | 'left' | 'center';
 export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
   customer,
   onUpdateChart,
+  onSaveChart,
 }) => {
   // Local chart state synchronized with customer.teethChart
   const [chart, setChart] = useState<TeethChartState>(() => customer.teethChart || {});
@@ -193,6 +196,49 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
   const [selectedToothNum, setSelectedToothNum] = useState<number | null>(3);
   const [editingNote, setEditingNote] = useState<string>('');
   const [noteSaveMessage, setNoteSaveMessage] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const latestChartRef = useRef(chart);
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
+
+  useEffect(() => {
+    latestChartRef.current = chart;
+  }, [chart]);
+
+  const persistChart = async () => {
+    if (!onSaveChart || !dirtyRef.current || savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    setSaveMessage(null);
+    try {
+      await onSaveChart(latestChartRef.current);
+      dirtyRef.current = false;
+      setIsDirty(false);
+      setSaveMessage('Saved');
+    } catch {
+      setSaveMessage('Save failed');
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void persistChart();
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [onSaveChart]);
+
+  const commitChart = (nextChart: TeethChartState) => {
+    setChart(nextChart);
+    dirtyRef.current = true;
+    setIsDirty(true);
+    setSaveMessage(null);
+    onUpdateChart?.(nextChart);
+  };
 
   // Sync when customer changes
   React.useEffect(() => {
@@ -277,8 +323,7 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
       [toothNum]: updatedTooth,
     };
 
-    setChart(nextChart);
-    onUpdateChart?.(nextChart);
+    commitChart(nextChart);
   };
 
   // Color entire tooth in one action
@@ -307,8 +352,7 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
       [toothNum]: updatedTooth,
     };
 
-    setChart(nextChart);
-    onUpdateChart?.(nextChart);
+    commitChart(nextChart);
   };
 
   // Save notes for the active tooth
@@ -329,8 +373,7 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
       },
     };
 
-    setChart(nextChart);
-    onUpdateChart?.(nextChart);
+    commitChart(nextChart);
     setNoteSaveMessage(true);
     setTimeout(() => setNoteSaveMessage(false), 2000);
   };
@@ -362,8 +405,7 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
         },
       };
     });
-    setChart(nextChart);
-    onUpdateChart?.(nextChart);
+    commitChart(nextChart);
   };
 
   // Reset entire chart to natural sound enamel
@@ -385,8 +427,7 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
         },
       };
     }
-    setChart(nextChart);
-    onUpdateChart?.(nextChart);
+    commitChart(nextChart);
   };
 
   // Define teeth for the 4 Quadrants
@@ -594,6 +635,16 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
               📝 Notes: {stats.notesCount}
             </span>
           )}
+          <button
+            type="button"
+            onClick={() => void persistChart()}
+            disabled={!isDirty || isSaving}
+            className="px-2.5 py-1 rounded-lg bg-sky-700 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1 border border-sky-500 transition-colors cursor-pointer"
+            title="Save chart changes"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>{isSaving ? 'Saving...' : saveMessage || 'Save'}</span>
+          </button>
           <button
             type="button"
             onClick={handleResetAllTeeth}

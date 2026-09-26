@@ -352,13 +352,17 @@ export default function App() {
   // Handlers
   const handleUpdateChart = (updatedChart: TeethChartState) => {
     updateCurrentCustomer(() => ({ teethChart: updatedChart }));
+  };
+
+  const handleSaveChart = async (updatedChart: TeethChartState) => {
     if (selectedCustomerId) {
       const patientId = selectedCustomerId;
       dirtyChartPatients.current.add(patientId);
-      apiClient.odontogram.bulkUpdate(patientId, updatedChart).then(() => {
+      await apiClient.odontogram.bulkUpdate(patientId, updatedChart).then(() => {
         dirtyChartPatients.current.delete(patientId);
       }).catch((err) => {
         console.warn('Odontogram backend note:', err.message);
+        throw err;
       });
     }
   };
@@ -759,6 +763,7 @@ export default function App() {
                 onOpenPresentation={() => setIsPresentationOpen(true)}
                 onNavigateToTab={navigateToTab}
                 onUpdateChart={handleUpdateChart}
+                onSaveChart={handleSaveChart}
               />
             )}
 
