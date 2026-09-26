@@ -192,9 +192,11 @@ export default function App() {
 
     // 1. Live Odontogram updates from other clinical stations
     const unsubOdonto = realtimeClient.on('odontogram:updated', ({ patientId, chart }: any) => {
-      setCustomers((prev) =>
-        prev.map((c) => (c.id === patientId ? { ...c, teethChart: chart } : c))
-      );
+      setCustomers((prev) => {
+        const updated = prev.map((c) => (c.id === patientId ? { ...c, teethChart: chart } : c));
+        saveCustomers(updated);
+        return updated;
+      });
     });
 
     // 2. Live Appointment updates

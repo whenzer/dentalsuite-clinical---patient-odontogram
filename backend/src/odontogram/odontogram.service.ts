@@ -90,11 +90,11 @@ export class OdontogramService {
 
     const updatedChart = await this.getPatientChart(patientId);
 
-    // Auto recalculate recommended services in background
-    await this.recalculateClinicalRecommendations(patientId, updatedChart);
-
     // Broadcast live WebSocket update to all connected stations
     this.realtimeGateway.broadcastOdontogramUpdate(patientId, updatedChart);
+
+    // Recommendation refresh is secondary to keeping clinical charts in sync.
+    void this.recalculateClinicalRecommendations(patientId, updatedChart).catch(() => undefined);
 
     return updatedChart;
   }
@@ -130,8 +130,8 @@ export class OdontogramService {
     }
 
     const updatedChart = await this.getPatientChart(patientId);
-    await this.recalculateClinicalRecommendations(patientId, updatedChart);
     this.realtimeGateway.broadcastOdontogramUpdate(patientId, updatedChart);
+    void this.recalculateClinicalRecommendations(patientId, updatedChart).catch(() => undefined);
 
     return updatedChart;
   }

@@ -14,7 +14,10 @@ class RealtimeSocketClient {
   private isConnected = false;
 
   connect(wsUrl?: string) {
-    if (this.socket?.connected) return;
+    if (this.socket) {
+      if (!this.socket.connected) this.socket.connect();
+      return;
+    }
 
     const apiUrl = wsUrl || apiClient.getBaseUrl();
     const socketUrl = apiUrl.startsWith('http')
