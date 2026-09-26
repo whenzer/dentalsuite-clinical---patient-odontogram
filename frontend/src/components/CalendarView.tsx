@@ -80,7 +80,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   // Calendar View mode
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedDate, setSelectedDate] = useState<string>('2026-09-03'); // Today
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [filterDoctor, setFilterDoctor] = useState<string>('all');
   const [filterOperatory, setFilterOperatory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -112,15 +112,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Weekly throughput trend (7 days: Aug 31 to Sep 6, 2026)
   const weeklyThroughputData = useMemo(() => {
-    const dates = [
-      { date: '2026-08-31', dayLabel: 'Mon' },
-      { date: '2026-09-01', dayLabel: 'Tue' },
-      { date: '2026-09-02', dayLabel: 'Wed' },
-      { date: '2026-09-03', dayLabel: 'Thu (Today)' },
-      { date: '2026-09-04', dayLabel: 'Fri' },
-      { date: '2026-09-05', dayLabel: 'Sat' },
-      { date: '2026-09-06', dayLabel: 'Sun' },
-    ];
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const selected = new Date(year, month - 1, day);
+    const mondayOffset = (selected.getDay() + 6) % 7;
+    const monday = new Date(selected);
+    monday.setDate(selected.getDate() - mondayOffset);
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      const dateValue = date.toISOString().split('T')[0];
+      return { date: dateValue, dayLabel: date.toLocaleDateString('en-US', { weekday: 'short' }) };
+    });
 
     return dates.map((d) => {
       const summary = calculateDailyThroughput(appointments, d.date, 8);
@@ -197,7 +199,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const handleSetToday = () => {
-    setSelectedDate('2026-09-03');
+    setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
   // Open modal helpers
@@ -467,12 +469,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             type="button"
             onClick={handleSetToday}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
-              selectedDate === '2026-09-03'
+              selectedDate === new Date().toISOString().split('T')[0]
                 ? 'bg-sky-600 text-white border-sky-600'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            Today (Sep 3)
+            Today
           </button>
 
           <button
@@ -832,7 +834,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-sm text-slate-900">
-              Weekly Overview: Aug 31 - Sep 6, 2026
+              Weekly Overview
             </h3>
             <span className="text-xs text-slate-500">
               {filteredAppointments.length} Appointments scheduled across week
@@ -842,7 +844,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
             {weeklyThroughputData.map((d) => {
               const dayAppts = appointments.filter((a) => a.date === d.date);
-              const isToday = d.date === '2026-09-03';
+              const isToday = d.date === new Date().toISOString().split('T')[0];
 
               return (
                 <div
@@ -917,12 +919,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 35 }, (_, idx) => {
-              const dayNum = idx - 1; // September 2026 starts on Tuesday (Sep 1)
-              const isValid = dayNum >= 1 && dayNum <= 30;
-              const dateStr = `2026-09-${String(dayNum).padStart(2, '0')}`;
+              const [year, month] = selectedDate.split('-').map(Number);
+              const firstDay = new Date(year, month - 1, 1);
+              const dayNum = idx - firstDay.getDay() + 1;
+              const daysInMonth = new Date(year, month, 0).getDate();
+              const isValid = dayNum >= 1 && dayNum <= daysInMonth;
+              const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
               const dayAppts = appointments.filter((a) => a.date === dateStr);
               const treatedCount = dayAppts.filter((a) => a.status === 'completed').length;
-              const isToday = dateStr === '2026-09-03';
+              const isToday = dateStr === new Date().toISOString().split('T')[0];
               const isSelected = dateStr === selectedDate;
 
               if (!isValid) {

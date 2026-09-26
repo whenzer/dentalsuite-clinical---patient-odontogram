@@ -15,7 +15,6 @@ import {
 } from '../types';
 import { createDefaultTeethChart } from '../data/mockData';
 import { generateRecommendedServices } from '../utils/dentalRules';
-import { INITIAL_TREATMENT_DETERMINATIONS } from '../data/adminMasterData';
 import {
   formatPHP,
   formatPHPRange,
@@ -94,7 +93,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   customers,
   selectedCustomerId,
   appointments = [],
-  determinations = INITIAL_TREATMENT_DETERMINATIONS,
+  determinations = [],
   onSelectCustomer,
   onAddNewCustomer,
   onUpdateAttachedFiles,
@@ -153,7 +152,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   const [logCategory, setLogCategory] = useState<
     'Preventive' | 'Restorative' | 'Endodontic' | 'Periodontic' | 'Oral Surgery' | 'Cosmetic' | 'Orthodontic'
   >('Restorative');
-  const [logDoctor, setLogDoctor] = useState('Dr. Marcus Vance, DDS');
+  const [logDoctor, setLogDoctor] = useState('');
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logTeeth, setLogTeeth] = useState('');
   const [logCost, setLogCost] = useState(250);
@@ -184,7 +183,7 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
     const custAppts = appointments.filter((a) => a.customerId === customerId);
     if (custAppts.length === 0) return null;
 
-    const todayStr = '2026-09-03';
+    const todayStr = new Date().toISOString().split('T')[0];
 
     // Prioritize today's appointments first
     const todayAppts = custAppts.filter((a) => a.date === todayStr);

@@ -33,7 +33,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   mode,
   appointment,
   customers,
-  defaultDate = '2026-09-03',
+  defaultDate = new Date().toISOString().split('T')[0],
   defaultCustomerId,
   onClose,
   onSave,

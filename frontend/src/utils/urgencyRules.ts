@@ -1,5 +1,4 @@
 import { UrgencyLevel, TreatmentDetermination } from '../types';
-import { INITIAL_TREATMENT_DETERMINATIONS } from '../data/adminMasterData';
 
 /**
  * Format any number to Philippine Peso (PHP ₱)
@@ -124,7 +123,7 @@ export function getTreatmentUrgency(treatmentName: string = ''): UrgencyInfo {
  */
 export function findDetermination(
   treatmentName: string = '',
-  determinationsList: TreatmentDetermination[] = INITIAL_TREATMENT_DETERMINATIONS
+  determinationsList: TreatmentDetermination[] = []
 ): TreatmentDetermination | undefined {
   const norm = treatmentName.toLowerCase().trim();
   // Exact match

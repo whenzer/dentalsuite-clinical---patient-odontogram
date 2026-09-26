@@ -8,7 +8,6 @@ import {
   TreatmentDetermination,
   AuthUser,
 } from '../types';
-import { INITIAL_TREATMENT_DETERMINATIONS } from '../data/adminMasterData';
 import { evaluateMaintenanceDues, generateRecommendedServices } from './dentalRules';
 
 const STORAGE_KEY = 'dental_suite_customers_v1';
@@ -17,7 +16,7 @@ const APPOINTMENTS_STORAGE_KEY = 'dental_suite_appointments_v1';
 const CHAIRS_STORAGE_KEY = 'dental_suite_chairs_v1';
 const SHIFTS_STORAGE_KEY = 'dental_suite_shifts_v1';
 const CONSUMABLES_STORAGE_KEY = 'dental_suite_consumables_v1';
-const DETERMINATIONS_STORAGE_KEY = 'dental_suite_determinations_v1';
+const DETERMINATIONS_STORAGE_KEY = 'dental_suite_determinations_v2';
 const AUTH_USER_KEY = 'dental_suite_auth_user_v1';
 
 export function loadCustomers(): Customer[] {
@@ -138,12 +137,12 @@ export function loadDeterminations(): TreatmentDetermination[] {
   try {
     const raw = localStorage.getItem(DETERMINATIONS_STORAGE_KEY);
     if (!raw) {
-      return INITIAL_TREATMENT_DETERMINATIONS;
+      return [];
     }
     return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse determinations from localStorage', err);
-    return INITIAL_TREATMENT_DETERMINATIONS;
+    return [];
   }
 }
 
@@ -261,7 +260,7 @@ export function resetToDefaults(): { customers: Customer[]; appointments: Appoin
   saveChairs([]);
   saveShifts([]);
   saveConsumables([]);
-  saveDeterminations(INITIAL_TREATMENT_DETERMINATIONS);
+  saveDeterminations([]);
   return {
     customers: [],
     appointments: [],

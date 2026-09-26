@@ -8,12 +8,6 @@ import {
   ToothNumber,
 } from '../types';
 import {
-  PHOTO_ANTERIOR_BEFORE,
-  PHOTO_ANTERIOR_AFTER,
-  PHOTO_MOLAR_BEFORE,
-  PHOTO_MOLAR_AFTER,
-} from '../data/samplePhotos';
-import {
   X,
   CheckCircle2,
   FileText,
@@ -50,7 +44,7 @@ export const SessionTreatmentModal: React.FC<SessionTreatmentModalProps> = ({
 }) => {
   // Treatment Log state
   const [procedureName, setProcedureName] = useState(
-    appointment.procedureName || 'Composite Restoration'
+    appointment.procedureName || ''
   );
   const [category, setCategory] = useState<TreatmentLog['category']>(
     (appointment.procedureCategory as TreatmentLog['category']) || 'Restorative'
@@ -60,8 +54,7 @@ export const SessionTreatmentModal: React.FC<SessionTreatmentModalProps> = ({
     appointment.relatedTeeth || [14]
   );
   const [clinicalNotes, setClinicalNotes] = useState(
-    appointment.notes ||
-      'Patient presented for treatment. Administered 2% Lidocaine 1:100k epi. Excavated decayed structure to sound dentin. Selective etched, bonded, layered composite resin, cured in increments. Articulation verified and polished.'
+    appointment.notes || ''
   );
   const [cost, setCost] = useState<number>(380);
 
@@ -74,24 +67,9 @@ export const SessionTreatmentModal: React.FC<SessionTreatmentModalProps> = ({
       category: DentalPhoto['category'];
       stage: 'before' | 'after' | 'standard';
     }>
-  >([
-    {
-      id: `photo-session-pre-${Date.now()}`,
-      url: PHOTO_MOLAR_BEFORE,
-      caption: `Pre-treatment intraoral view: ${appointment.procedureName}`,
-      category: 'pre_op',
-      stage: 'before',
-    },
-    {
-      id: `photo-session-post-${Date.now() + 1}`,
-      url: PHOTO_MOLAR_AFTER,
-      caption: `Post-treatment finalized clinical restoration`,
-      category: 'post_op',
-      stage: 'after',
-    },
-  ]);
+  >([]);
 
-  const [createBAPair, setCreateBAPair] = useState<boolean>(true);
+  const [createBAPair, setCreateBAPair] = useState<boolean>(false);
   const [baTitle, setBaTitle] = useState(
     `Today's Clinical Case: ${appointment.procedureName}`
   );
@@ -120,46 +98,6 @@ export const SessionTreatmentModal: React.FC<SessionTreatmentModalProps> = ({
   };
 
   // Add custom photo op
-  const handleAddPhotoOp = (presetType: 'molar_pre' | 'molar_post' | 'ant_pre' | 'ant_post') => {
-    let url = PHOTO_MOLAR_BEFORE;
-    let stage: 'before' | 'after' = 'before';
-    let caption = 'Clinical intraoral photo op';
-    let cat: DentalPhoto['category'] = 'intraoral';
-
-    if (presetType === 'molar_pre') {
-      url = PHOTO_MOLAR_BEFORE;
-      stage = 'before';
-      cat = 'pre_op';
-      caption = 'Pre-op deep occlusal caries view';
-    } else if (presetType === 'molar_post') {
-      url = PHOTO_MOLAR_AFTER;
-      stage = 'after';
-      cat = 'post_op';
-      caption = 'Post-op anatomical composite restoration';
-    } else if (presetType === 'ant_pre') {
-      url = PHOTO_ANTERIOR_BEFORE;
-      stage = 'before';
-      cat = 'pre_op';
-      caption = 'Anterior pre-op aesthetic documentation';
-    } else if (presetType === 'ant_post') {
-      url = PHOTO_ANTERIOR_AFTER;
-      stage = 'after';
-      cat = 'post_op';
-      caption = 'Anterior post-op cosmetic smile result';
-    }
-
-    setSessionPhotos([
-      ...sessionPhotos,
-      {
-        id: `photo-op-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        url,
-        caption,
-        category: cat,
-        stage,
-      },
-    ]);
-  };
-
   const handleRemovePhoto = (id: string) => {
     setSessionPhotos(sessionPhotos.filter((p) => p.id !== id));
   };
@@ -500,39 +438,6 @@ export const SessionTreatmentModal: React.FC<SessionTreatmentModalProps> = ({
                   />
                 </label>
               </div>
-            </div>
-
-            {/* Quick Preset Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400">Add Clinical Op:</span>
-              <button
-                type="button"
-                onClick={() => handleAddPhotoOp('molar_pre')}
-                className="text-[11px] font-semibold px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 hover:bg-slate-100"
-              >
-                + Molar Pre-Op Caries
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddPhotoOp('molar_post')}
-                className="text-[11px] font-semibold px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 hover:bg-slate-100"
-              >
-                + Molar Post-Op Composite
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddPhotoOp('ant_pre')}
-                className="text-[11px] font-semibold px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 hover:bg-slate-100"
-              >
-                + Anterior Pre-Op Smile
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddPhotoOp('ant_post')}
-                className="text-[11px] font-semibold px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 hover:bg-slate-100"
-              >
-                + Anterior Post-Op Veneer
-              </button>
             </div>
 
             {/* Photo Cards Grid */}

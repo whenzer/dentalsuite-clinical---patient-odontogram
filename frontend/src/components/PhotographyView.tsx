@@ -56,7 +56,7 @@ export const PhotographyView: React.FC<PhotographyViewProps> = ({
   );
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [comparisonMode, setComparisonMode] = useState<'slider' | 'side_by_side'>('slider');
-  const [pairTitle, setPairTitle] = useState('Anterior Smile Transformation');
+  const [pairTitle, setPairTitle] = useState('');
   const [pairSavedSuccess, setPairSavedSuccess] = useState(false);
 
   // Filter gallery
