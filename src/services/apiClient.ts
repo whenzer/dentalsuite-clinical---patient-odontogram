@@ -11,9 +11,15 @@ export interface AuthTokens {
 
 export type SessionExpiredListener = () => void;
 
+interface ChartSyncQueue {
+  pendingChart: any | null;
+  flushPromise: Promise<any> | null;
+}
+
 class ApiClient {
   private refreshPromise: Promise<string> | null = null;
   private sessionExpiredListeners: SessionExpiredListener[] = [];
+  private chartSyncQueues = new Map<string, ChartSyncQueue>();
 
   public getBaseUrl(): string {
     const custom = localStorage.getItem('dentalsuite_api_url');
@@ -385,11 +391,33 @@ class ApiClient {
         body: JSON.stringify(toothData),
       }),
 
-    bulkUpdate: (patientId: string, chart: any) =>
-      this.request<any>(`/odontogram/${patientId}/bulk`, {
-        method: 'PUT',
-        body: JSON.stringify(chart),
-      }),
+    bulkUpdate: (patientId: string, chart: any) => {
+      const queue = this.chartSyncQueues.get(patientId) || {
+        pendingChart: null,
+        flushPromise: null,
+      };
+      queue.pendingChart = chart;
+
+      if (!queue.flushPromise) {
+        const flush = async () => {
+          while (queue.pendingChart) {
+            const nextChart = queue.pendingChart;
+            queue.pendingChart = null;
+            await this.request<any>(`/odontogram/${patientId}/bulk`, {
+              method: 'PUT',
+              body: JSON.stringify(nextChart),
+            });
+          }
+        };
+        queue.flushPromise = flush().finally(() => {
+          queue.flushPromise = null;
+          if (!queue.pendingChart) this.chartSyncQueues.delete(patientId);
+        });
+      }
+
+      this.chartSyncQueues.set(patientId, queue);
+      return queue.flushPromise;
+    },
 
     createSnapshot: (patientId: string, visitTitle: string, notes?: string) =>
       this.request<any>(`/odontogram/${patientId}/snapshots`, {
