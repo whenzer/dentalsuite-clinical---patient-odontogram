@@ -25,7 +25,6 @@ import {
 } from '../utils/urgencyRules';
 import { AttachedFilesSection } from './AttachedFilesSection';
 import { DentalChartingTab } from './DentalChartingTab';
-import { ChartLoadingSkeleton } from './ChartLoadingSkeleton';
 import {
   Users,
   Search,
@@ -67,7 +66,6 @@ interface CustomerManagementProps {
   selectedCustomerId?: string;
   appointments?: Appointment[];
   determinations?: TreatmentDetermination[];
-  isPatientsLoading?: boolean;
   onSelectCustomer: (id: string) => void;
   onAddNewCustomer: (customer: Customer) => void;
   onUpdateAttachedFiles?: (files: AttachedFile[]) => void;
@@ -96,7 +94,6 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   selectedCustomerId,
   appointments = [],
   determinations = [],
-  isPatientsLoading = false,
   onSelectCustomer,
   onAddNewCustomer,
   onUpdateAttachedFiles,
@@ -750,10 +747,6 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
   // VIEW 1: PATIENT SELECTION QUEUE (When no patient is selected)
   // =========================================================================
   if (!selectedCustomer) {
-    if (isPatientsLoading) {
-      return <ChartLoadingSkeleton />;
-    }
-
     return (
       <div className="space-y-4">
         {/* Selection Queue Header */}
@@ -1516,14 +1509,10 @@ export const CustomerManagement: React.FC<CustomerManagementProps> = ({
       {/* ===================================================================== */}
       {activePatientTab === 'charting' && (
         <div id="section-charting" className="animate-in fade-in duration-150">
-          {isPatientsLoading ? (
-            <ChartLoadingSkeleton />
-          ) : (
-            <DentalChartingTab
-              customer={selectedCustomer}
-              onUpdateChart={onUpdateChart}
-            />
-          )}
+          <DentalChartingTab
+            customer={selectedCustomer}
+            onUpdateChart={onUpdateChart}
+          />
         </div>
       )}
 

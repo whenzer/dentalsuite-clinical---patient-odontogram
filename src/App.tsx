@@ -54,7 +54,6 @@ import { LoginPage } from './components/LoginPage';
 import { ClinicManagementPortal } from './components/ClinicManagementPortal';
 import { AdminView } from './components/AdminView';
 import { BackendSettingsModal } from './components/BackendSettingsModal';
-import { ChartLoadingSkeleton } from './components/ChartLoadingSkeleton';
 import { Users, ArrowRight } from 'lucide-react';
 
 /**
@@ -130,12 +129,10 @@ export default function App() {
 
   // Backend connection & modal state
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [isPatientsLoading, setIsPatientsLoading] = useState(true);
   const [isBackendSettingsOpen, setIsBackendSettingsOpen] = useState(false);
 
   // Synchronize state with NestJS + Supabase REST API
   const syncWithBackend = useCallback(async () => {
-    setIsPatientsLoading(true);
     try {
       await apiClient.checkHealth();
       setIsBackendConnected(true);
@@ -188,8 +185,6 @@ export default function App() {
       }
     } catch {
       setIsBackendConnected(false);
-    } finally {
-      setIsPatientsLoading(false);
     }
   }, []);
 
@@ -740,7 +735,6 @@ export default function App() {
                 selectedCustomerId={selectedCustomerId}
                 appointments={appointments}
                 determinations={determinations}
-                isPatientsLoading={isPatientsLoading}
                 onSelectCustomer={handleSelectCustomer}
                 onAddNewCustomer={handleAddNewCustomer}
                 onUpdateAttachedFiles={handleUpdateAttachedFiles}
@@ -776,15 +770,11 @@ export default function App() {
               activeCustomer ? (
                 <>
                   {activeTab === 'odontogram' && (
-                    isPatientsLoading ? (
-                      <ChartLoadingSkeleton />
-                    ) : (
-                      <Odontogram
-                        customer={activeCustomer}
-                        onUpdateChart={handleUpdateChart}
-                        onSaveSnapshot={handleSaveSnapshot}
-                      />
-                    )
+                    <Odontogram
+                      customer={activeCustomer}
+                      onUpdateChart={handleUpdateChart}
+                      onSaveSnapshot={handleSaveSnapshot}
+                    />
                   )}
 
                   {activeTab === 'photography' && (

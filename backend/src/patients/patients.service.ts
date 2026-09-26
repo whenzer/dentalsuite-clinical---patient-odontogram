@@ -33,11 +33,13 @@ export class PatientsService {
           { ...baseWhere, phone: ILike(`%${search}%`) },
           { ...baseWhere, email: ILike(`%${search}%`) },
         ],
+        relations: ['teeth'],
         order: { lastName: 'ASC', firstName: 'ASC' },
       });
     }
     return this.patientsRepo.find({
       where: baseWhere,
+      relations: ['teeth'],
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
   }
