@@ -14,6 +14,8 @@ import {
   Stethoscope,
   Smile,
   Save,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 
 export interface DentalChartingTabProps {
@@ -202,10 +204,25 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
   const latestChartRef = useRef(chart);
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
+  const undoStackRef = useRef<TeethChartState[]>([]);
+  const redoStackRef = useRef<TeethChartState[]>([]);
+  const customerIdRef = useRef(customer.id);
 
   useEffect(() => {
     latestChartRef.current = chart;
   }, [chart]);
+
+  useEffect(() => {
+    if (customerIdRef.current !== customer.id) {
+      customerIdRef.current = customer.id;
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      dirtyRef.current = false;
+      setIsDirty(false);
+      setSaveMessage(null);
+    }
+    if (customer.teethChart) setChart(customer.teethChart);
+  }, [customer.id, customer.teethChart]);
 
   const persistChart = async () => {
     if (!onSaveChart || !dirtyRef.current || savingRef.current) return;
@@ -233,11 +250,36 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
   }, [onSaveChart]);
 
   const commitChart = (nextChart: TeethChartState) => {
+    undoStackRef.current.push(latestChartRef.current);
+    redoStackRef.current = [];
     setChart(nextChart);
     dirtyRef.current = true;
     setIsDirty(true);
     setSaveMessage(null);
     onUpdateChart?.(nextChart);
+  };
+
+  const applyHistoryChart = (nextChart: TeethChartState) => {
+    latestChartRef.current = nextChart;
+    setChart(nextChart);
+    dirtyRef.current = true;
+    setIsDirty(true);
+    setSaveMessage(null);
+    onUpdateChart?.(nextChart);
+  };
+
+  const handleUndo = () => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current.push(latestChartRef.current);
+    applyHistoryChart(previous);
+  };
+
+  const handleRedo = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push(latestChartRef.current);
+    applyHistoryChart(next);
   };
 
   // Sync when customer changes
@@ -635,6 +677,26 @@ export const DentalChartingTab: React.FC<DentalChartingTabProps> = ({
               📝 Notes: {stats.notesCount}
             </span>
           )}
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={undoStackRef.current.length === 0}
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700 transition-colors cursor-pointer"
+            title="Undo last chart change"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            <span>Undo</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleRedo}
+            disabled={redoStackRef.current.length === 0}
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 text-xs font-semibold flex items-center gap-1 border border-slate-700 transition-colors cursor-pointer"
+            title="Redo chart change"
+          >
+            <Redo2 className="w-3.5 h-3.5" />
+            <span>Redo</span>
+          </button>
           <button
             type="button"
             onClick={() => void persistChart()}
