@@ -140,28 +140,28 @@ export default function App() {
           apiClient.admin.getDeterminations(),
         ]);
 
-      if (patientsRes.status === 'fulfilled' && patientsRes.value && patientsRes.value.length > 0) {
+      if (patientsRes.status === 'fulfilled' && Array.isArray(patientsRes.value)) {
         const mapped = patientsRes.value.map(mapPatientToCustomer);
         setCustomers(mapped);
         saveCustomers(mapped);
       }
-      if (apptsRes.status === 'fulfilled' && apptsRes.value && apptsRes.value.length > 0) {
+      if (apptsRes.status === 'fulfilled' && Array.isArray(apptsRes.value)) {
         setAppointments(apptsRes.value);
         saveAppointments(apptsRes.value);
       }
-      if (chairsRes.status === 'fulfilled' && chairsRes.value && chairsRes.value.length > 0) {
+      if (chairsRes.status === 'fulfilled' && Array.isArray(chairsRes.value)) {
         setChairs(chairsRes.value);
         saveChairs(chairsRes.value);
       }
-      if (shiftsRes.status === 'fulfilled' && shiftsRes.value && shiftsRes.value.length > 0) {
+      if (shiftsRes.status === 'fulfilled' && Array.isArray(shiftsRes.value)) {
         setShifts(shiftsRes.value);
         saveShifts(shiftsRes.value);
       }
-      if (consumablesRes.status === 'fulfilled' && consumablesRes.value && consumablesRes.value.length > 0) {
+      if (consumablesRes.status === 'fulfilled' && Array.isArray(consumablesRes.value)) {
         setConsumables(consumablesRes.value);
         saveConsumables(consumablesRes.value);
       }
-      if (detsRes.status === 'fulfilled' && detsRes.value && detsRes.value.length > 0) {
+      if (detsRes.status === 'fulfilled' && Array.isArray(detsRes.value)) {
         setDeterminations(detsRes.value);
         saveDeterminations(detsRes.value);
       }

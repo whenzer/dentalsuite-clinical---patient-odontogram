@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getTypeOrmConfig } from './database.config';
-import { SeedService } from './seed/seed.service';
 import { ClinicEntity } from '../clinics/entities/clinic.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { DentalChairEntity } from '../clinic-admin/entities/dental-chair.entity';
@@ -34,7 +33,5 @@ import { RulesModule } from '../rules/rules.module';
     ]),
     RulesModule,
   ],
-  providers: [SeedService],
-  exports: [SeedService],
 })
 export class DatabaseModule {}
