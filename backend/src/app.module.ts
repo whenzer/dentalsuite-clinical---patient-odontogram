@@ -4,6 +4,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PatientsModule } from './patients/patients.module';
+import { ClinicsModule } from './clinics/clinics.module';
 import { OdontogramModule } from './odontogram/odontogram.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { TreatmentsModule } from './treatments/treatments.module';
@@ -23,6 +24,7 @@ import { AppController } from './app.controller';
     AuthModule,
     UsersModule,
     PatientsModule,
+    ClinicsModule,
     OdontogramModule,
     AppointmentsModule,
     TreatmentsModule,

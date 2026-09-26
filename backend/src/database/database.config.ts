@@ -52,7 +52,7 @@ export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOpt
       type: 'postgres',
       url: databaseUrl,
       entities,
-      synchronize: shouldSync,
+      synchronize: true,
       logging,
       ssl: {
         rejectUnauthorized: false, // Required for cloud Supabase pooler / direct connection
@@ -78,7 +78,7 @@ export const getTypeOrmConfig = (configService: ConfigService): TypeOrmModuleOpt
     password: configService.get<string>('DB_PASSWORD', 'postgres'),
     database: configService.get<string>('DB_NAME', 'postgres'),
     entities,
-    synchronize: shouldSync,
+    synchronize: true,
     logging,
     ssl: isSsl ? { rejectUnauthorized } : false,
   };
