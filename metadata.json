@@ -1,0 +1,6 @@
+{
+  "name": "DentalSuite Clinical & Patient Odontogram",
+  "description": "Comprehensive dentistry software featuring patient management, treatment logs, clinical camera with before-after comparisons, interactive 32-tooth odontogram, and automated next-visit care recommendations.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
