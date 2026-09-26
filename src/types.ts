@@ -75,9 +75,40 @@ export interface AuthUser {
   name: string;
   username: string;
   email: string;
-  role: 'admin' | 'dentist' | 'receptionist';
+  role: 'admin' | 'dentist' | 'receptionist' | 'hygienist' | 'assistant' | 'clinic_admin' | string;
   title: string;
   avatarUrl?: string;
+  clinicId?: string;
+  clinicName?: string;
+  accountType?: 'staff' | 'clinic';
+  permissions?: string[];
+  status?: 'active' | 'inactive';
+}
+
+export interface ClinicProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  registrationNumber?: string;
+  ownerName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StaffMember {
+  id: string;
+  clinicId?: string;
+  name: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'dentist' | 'receptionist' | 'hygienist' | 'assistant' | string;
+  title: string;
+  permissions: string[];
+  status: 'active' | 'inactive';
+  avatarUrl?: string;
+  createdAt?: string;
 }
 
 export interface DentalChair {

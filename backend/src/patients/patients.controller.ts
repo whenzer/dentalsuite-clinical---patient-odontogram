@@ -14,6 +14,7 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('api/v1/patients')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,8 +22,8 @@ export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
   @Get()
-  async getAllPatients(@Query('search') search?: string) {
-    return this.patientsService.findAll(search);
+  async getAllPatients(@CurrentUser() user: any, @Query('search') search?: string) {
+    return this.patientsService.findAll(user?.clinicId, search);
   }
 
   @Get(':id')
@@ -31,9 +32,9 @@ export class PatientsController {
   }
 
   @Post()
-  @Roles('admin', 'dentist', 'receptionist')
-  async createPatient(@Body() dto: CreatePatientDto) {
-    return this.patientsService.create(dto);
+  @Roles('admin', 'dentist', 'receptionist', 'clinic_admin')
+  async createPatient(@CurrentUser() user: any, @Body() dto: CreatePatientDto) {
+    return this.patientsService.create(user?.clinicId, dto);
   }
 
   @Put(':id')

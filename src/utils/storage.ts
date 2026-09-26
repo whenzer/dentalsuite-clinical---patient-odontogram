@@ -8,15 +8,7 @@ import {
   TreatmentDetermination,
   AuthUser,
 } from '../types';
-import { INITIAL_CUSTOMERS } from '../data/mockData';
-import { INITIAL_APPOINTMENTS } from '../data/mockAppointments';
-import {
-  INITIAL_CHAIRS,
-  INITIAL_SHIFTS,
-  INITIAL_CONSUMABLES,
-  INITIAL_TREATMENT_DETERMINATIONS,
-  DEFAULT_AUTH_USERS,
-} from '../data/adminMasterData';
+import { INITIAL_TREATMENT_DETERMINATIONS } from '../data/adminMasterData';
 import { evaluateMaintenanceDues, generateRecommendedServices } from './dentalRules';
 
 const STORAGE_KEY = 'dental_suite_customers_v1';
@@ -32,11 +24,9 @@ export function loadCustomers(): Customer[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      saveCustomers(INITIAL_CUSTOMERS);
-      return INITIAL_CUSTOMERS;
+      return [];
     }
     const parsed: Customer[] = JSON.parse(raw);
-    // Refresh cleaning dues status and recommendations
     return parsed.map((c) => ({
       ...c,
       cleaningDues: evaluateMaintenanceDues(c.cleaningDues || []),
@@ -44,7 +34,7 @@ export function loadCustomers(): Customer[] {
     }));
   } catch (err) {
     console.error('Failed to parse customers from localStorage', err);
-    return INITIAL_CUSTOMERS;
+    return [];
   }
 }
 
@@ -60,13 +50,12 @@ export function loadAppointments(): Appointment[] {
   try {
     const raw = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
     if (!raw) {
-      saveAppointments(INITIAL_APPOINTMENTS);
-      return INITIAL_APPOINTMENTS;
+      return [];
     }
     return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse appointments from localStorage', err);
-    return INITIAL_APPOINTMENTS;
+    return [];
   }
 }
 
@@ -86,13 +75,12 @@ export function loadChairs(): DentalChair[] {
   try {
     const raw = localStorage.getItem(CHAIRS_STORAGE_KEY);
     if (!raw) {
-      saveChairs(INITIAL_CHAIRS);
-      return INITIAL_CHAIRS;
+      return [];
     }
     return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse chairs from localStorage', err);
-    return INITIAL_CHAIRS;
+    return [];
   }
 }
 
@@ -108,13 +96,12 @@ export function loadShifts(): StaffShift[] {
   try {
     const raw = localStorage.getItem(SHIFTS_STORAGE_KEY);
     if (!raw) {
-      saveShifts(INITIAL_SHIFTS);
-      return INITIAL_SHIFTS;
+      return [];
     }
     return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse shifts from localStorage', err);
-    return INITIAL_SHIFTS;
+    return [];
   }
 }
 
@@ -130,13 +117,12 @@ export function loadConsumables(): ConsumableItem[] {
   try {
     const raw = localStorage.getItem(CONSUMABLES_STORAGE_KEY);
     if (!raw) {
-      saveConsumables(INITIAL_CONSUMABLES);
-      return INITIAL_CONSUMABLES;
+      return [];
     }
     return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse consumables from localStorage', err);
-    return INITIAL_CONSUMABLES;
+    return [];
   }
 }
 
@@ -152,7 +138,6 @@ export function loadDeterminations(): TreatmentDetermination[] {
   try {
     const raw = localStorage.getItem(DETERMINATIONS_STORAGE_KEY);
     if (!raw) {
-      saveDeterminations(INITIAL_TREATMENT_DETERMINATIONS);
       return INITIAL_TREATMENT_DETERMINATIONS;
     }
     return JSON.parse(raw);
@@ -271,15 +256,15 @@ export function resetToDefaults(): { customers: Customer[]; appointments: Appoin
   localStorage.removeItem(SHIFTS_STORAGE_KEY);
   localStorage.removeItem(CONSUMABLES_STORAGE_KEY);
   localStorage.removeItem(DETERMINATIONS_STORAGE_KEY);
-  saveCustomers(INITIAL_CUSTOMERS);
-  saveAppointments(INITIAL_APPOINTMENTS);
-  saveChairs(INITIAL_CHAIRS);
-  saveShifts(INITIAL_SHIFTS);
-  saveConsumables(INITIAL_CONSUMABLES);
+  saveCustomers([]);
+  saveAppointments([]);
+  saveChairs([]);
+  saveShifts([]);
+  saveConsumables([]);
   saveDeterminations(INITIAL_TREATMENT_DETERMINATIONS);
   return {
-    customers: INITIAL_CUSTOMERS,
-    appointments: INITIAL_APPOINTMENTS,
+    customers: [],
+    appointments: [],
   };
 }
 

@@ -25,6 +25,10 @@ export class AppointmentEntity {
   id: string;
 
   @Index()
+  @Column({ type: 'uuid', nullable: true })
+  clinicId?: string;
+
+  @Index()
   @Column({ type: 'uuid' })
   customerId: string;
 

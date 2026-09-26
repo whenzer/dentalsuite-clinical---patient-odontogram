@@ -23,19 +23,21 @@ export class PatientsService {
     private readonly teethRepo: Repository<ToothRecordEntity>,
   ) {}
 
-  async findAll(search?: string): Promise<PatientEntity[]> {
+  async findAll(clinicId?: string, search?: string): Promise<PatientEntity[]> {
+    const baseWhere = clinicId ? { clinicId } : {};
     if (search) {
       return this.patientsRepo.find({
         where: [
-          { firstName: ILike(`%${search}%`) },
-          { lastName: ILike(`%${search}%`) },
-          { phone: ILike(`%${search}%`) },
-          { email: ILike(`%${search}%`) },
+          { ...baseWhere, firstName: ILike(`%${search}%`) },
+          { ...baseWhere, lastName: ILike(`%${search}%`) },
+          { ...baseWhere, phone: ILike(`%${search}%`) },
+          { ...baseWhere, email: ILike(`%${search}%`) },
         ],
         order: { lastName: 'ASC', firstName: 'ASC' },
       });
     }
     return this.patientsRepo.find({
+      where: baseWhere,
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
   }
@@ -62,11 +64,12 @@ export class PatientsService {
     return patient;
   }
 
-  async create(dto: CreatePatientDto): Promise<PatientEntity> {
+  async create(clinicId: string | undefined, dto: CreatePatientDto): Promise<PatientEntity> {
     const registeredDate = dto.registeredDate || new Date().toISOString().split('T')[0];
 
     const patient = this.patientsRepo.create({
       ...dto,
+      clinicId,
       registeredDate,
       medicalAlerts: dto.medicalAlerts || [],
       allergies: dto.allergies || [],

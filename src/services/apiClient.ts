@@ -21,7 +21,7 @@ class ApiClient {
     if (custom) return custom.replace(/\/+$/, '');
     const envUrl = (import.meta as any).env?.VITE_API_URL;
     if (envUrl) return envUrl.replace(/\/+$/, '');
-    return '/api/v1';
+    return 'https://dentalsuite-backend.fly.dev/api/v1';
   }
 
   public setBaseUrl(url: string) {
@@ -217,6 +217,60 @@ class ApiClient {
       return result;
     },
 
+    loginClinic: async (credentials: { email: string; password: string }) => {
+      const result = await this.request<any>('/auth/clinic/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+      if (result.accessToken && result.refreshToken) {
+        this.setTokens({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn || 900,
+        });
+      }
+      return result;
+    },
+
+    registerClinic: async (data: {
+      clinicName: string;
+      email: string;
+      password: string;
+      confirmPassword: string;
+      phone?: string;
+      address?: string;
+      registrationNumber?: string;
+      ownerName?: string;
+    }) => {
+      const result = await this.request<any>('/auth/clinic/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (result.accessToken && result.refreshToken) {
+        this.setTokens({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn || 900,
+        });
+      }
+      return result;
+    },
+
+    loginStaff: async (credentials: { usernameOrEmail: string; password: string }) => {
+      const result = await this.request<any>('/auth/staff/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+      if (result.accessToken && result.refreshToken) {
+        this.setTokens({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn || 900,
+        });
+      }
+      return result;
+    },
+
     refresh: (refreshToken: string) =>
       this.request<AuthTokens>('/auth/refresh', {
         method: 'POST',
@@ -236,6 +290,57 @@ class ApiClient {
     },
 
     me: () => this.request<any>('/auth/me'),
+  };
+
+  // Clinic Management Endpoints
+  clinic = {
+    getProfile: () => this.request<any>('/clinic/profile'),
+
+    updateProfile: (data: any) =>
+      this.request<any>('/clinic/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    getStaff: () => this.request<any[]>('/clinic/staff'),
+
+    registerStaff: (data: {
+      name: string;
+      username: string;
+      email: string;
+      password: string;
+      role: string;
+      title?: string;
+      permissions?: string[];
+      avatarUrl?: string;
+    }) =>
+      this.request<any>('/clinic/staff', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    updateStaff: (staffId: string, data: {
+      name?: string;
+      role?: string;
+      title?: string;
+      permissions?: string[];
+      status?: 'active' | 'inactive';
+    }) =>
+      this.request<any>(`/clinic/staff/${staffId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    resetStaffPassword: (staffId: string, password: string) =>
+      this.request<any>(`/clinic/staff/${staffId}/password`, {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+      }),
+
+    deleteStaff: (staffId: string) =>
+      this.request<any>(`/clinic/staff/${staffId}`, {
+        method: 'DELETE',
+      }),
   };
 
   // Patients Endpoints

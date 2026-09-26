@@ -22,6 +22,10 @@ export class PatientEntity {
   id: string;
 
   @Index()
+  @Column({ type: 'uuid', nullable: true })
+  clinicId?: string;
+
+  @Index()
   @Column({ type: 'varchar', length: 100 })
   firstName: string;
 

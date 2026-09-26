@@ -15,6 +15,7 @@ import { AppointmentStatus } from './entities/appointment.entity';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('api/v1/appointments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,10 +24,11 @@ export class AppointmentsController {
 
   @Get()
   async getAppointments(
+    @CurrentUser() user: any,
     @Query('date') date?: string,
     @Query('doctorName') doctorName?: string,
   ) {
-    return this.appointmentsService.findAll(date, doctorName);
+    return this.appointmentsService.findAll(user?.clinicId, date, doctorName);
   }
 
   @Get('throughput')
@@ -41,9 +43,9 @@ export class AppointmentsController {
   }
 
   @Post()
-  @Roles('admin', 'dentist', 'receptionist')
-  async createAppointment(@Body() dto: CreateAppointmentDto) {
-    return this.appointmentsService.create(dto);
+  @Roles('admin', 'dentist', 'receptionist', 'clinic_admin')
+  async createAppointment(@CurrentUser() user: any, @Body() dto: CreateAppointmentDto) {
+    return this.appointmentsService.create(user?.clinicId, dto);
   }
 
   @Put(':id')

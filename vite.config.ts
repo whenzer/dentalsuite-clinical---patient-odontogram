@@ -15,6 +15,13 @@ export default defineConfig(() => {
       port: 3000,
       host: '0.0.0.0',
       allowedHosts: true as const,
+      proxy: {
+        '/api': {
+          target: 'https://dentalsuite-backend.fly.dev',
+          changeOrigin: true,
+          secure: true,
+        },
+      },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

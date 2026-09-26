@@ -6,6 +6,9 @@ export class TreatmentDeterminationEntity {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   id: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  clinicId?: string;
+
   @Column({ type: 'varchar', length: 255 })
   treatmentName: string;
 

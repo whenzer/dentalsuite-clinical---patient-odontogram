@@ -5,6 +5,10 @@ export class DentalChairEntity {
   @PrimaryColumn({ type: 'varchar', length: 100 })
   id: string;
 
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  clinicId?: string;
+
   @Column({ type: 'varchar', length: 255 })
   name: string;
 

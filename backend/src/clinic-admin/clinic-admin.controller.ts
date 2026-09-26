@@ -15,6 +15,7 @@ import { TreatmentDeterminationEntity } from './entities/treatment-determination
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('api/v1/admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,18 +24,18 @@ export class ClinicAdminController {
 
   // Chairs
   @Get('chairs')
-  async getChairs() {
-    return this.adminService.getChairs();
+  async getChairs(@CurrentUser() user: any) {
+    return this.adminService.getChairs(user?.clinicId);
   }
 
   @Put('chairs')
-  @Roles('admin')
-  async saveChairs(@Body() chairs: DentalChairEntity[]) {
-    return this.adminService.saveChairs(chairs);
+  @Roles('admin', 'clinic_admin')
+  async saveChairs(@CurrentUser() user: any, @Body() chairs: DentalChairEntity[]) {
+    return this.adminService.saveChairs(user?.clinicId, chairs);
   }
 
   @Put('chairs/:id/status')
-  @Roles('admin', 'dentist', 'receptionist')
+  @Roles('admin', 'dentist', 'receptionist', 'clinic_admin')
   async updateChairStatus(
     @Param('id') id: string,
     @Body('status') status: 'operational' | 'in_use' | 'maintenance',
@@ -44,30 +45,30 @@ export class ClinicAdminController {
 
   // Shifts
   @Get('shifts')
-  async getShifts() {
-    return this.adminService.getShifts();
+  async getShifts(@CurrentUser() user: any) {
+    return this.adminService.getShifts(user?.clinicId);
   }
 
   @Put('shifts')
-  @Roles('admin')
-  async saveShifts(@Body() shifts: StaffShiftEntity[]) {
-    return this.adminService.saveShifts(shifts);
+  @Roles('admin', 'clinic_admin')
+  async saveShifts(@CurrentUser() user: any, @Body() shifts: StaffShiftEntity[]) {
+    return this.adminService.saveShifts(user?.clinicId, shifts);
   }
 
   // Consumables
   @Get('consumables')
-  async getConsumables() {
-    return this.adminService.getConsumables();
+  async getConsumables(@CurrentUser() user: any) {
+    return this.adminService.getConsumables(user?.clinicId);
   }
 
   @Put('consumables')
-  @Roles('admin', 'dentist')
-  async saveConsumables(@Body() items: ConsumableItemEntity[]) {
-    return this.adminService.saveConsumables(items);
+  @Roles('admin', 'dentist', 'clinic_admin')
+  async saveConsumables(@CurrentUser() user: any, @Body() items: ConsumableItemEntity[]) {
+    return this.adminService.saveConsumables(user?.clinicId, items);
   }
 
   @Post('consumables/:id/restock')
-  @Roles('admin', 'dentist')
+  @Roles('admin', 'dentist', 'clinic_admin')
   async restockConsumable(
     @Param('id') id: string,
     @Body('quantity') quantity: number,
@@ -77,13 +78,13 @@ export class ClinicAdminController {
 
   // Treatment Determinations
   @Get('determinations')
-  async getDeterminations() {
-    return this.adminService.getDeterminations();
+  async getDeterminations(@CurrentUser() user: any) {
+    return this.adminService.getDeterminations(user?.clinicId);
   }
 
   @Put('determinations')
-  @Roles('admin')
-  async saveDeterminations(@Body() dets: TreatmentDeterminationEntity[]) {
-    return this.adminService.saveDeterminations(dets);
+  @Roles('admin', 'clinic_admin')
+  async saveDeterminations(@CurrentUser() user: any, @Body() dets: TreatmentDeterminationEntity[]) {
+    return this.adminService.saveDeterminations(user?.clinicId, dets);
   }
 }

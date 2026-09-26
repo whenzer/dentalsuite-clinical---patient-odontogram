@@ -113,7 +113,13 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center Zone: Large Icons with Smaller Text Label on the Bottom */}
         {onTabChange && (
           <nav className="hidden lg:flex items-center gap-2 mx-4">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter((item) => {
+              if (!currentUser || !currentUser.permissions || currentUser.permissions.includes('all')) return true;
+              if (item.id === 'calendar') return currentUser.permissions.includes('appointments');
+              if (item.id === 'customers') return currentUser.permissions.includes('patients');
+              if (item.id === 'admin') return currentUser.permissions.includes('admin_view') || currentUser.role === 'admin';
+              return true;
+            }).map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -159,17 +165,17 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               />
               <span className="text-[11px] font-semibold">
-                {isBackendConnected ? 'Supabase Live' : 'Local Cache'}
+                {isBackendConnected ? 'Fly.dev Connected' : 'Checking Backend'}
               </span>
             </button>
           )}
 
           <div className="text-right hidden sm:block">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              {currentUser?.title || 'Clinic Director'}
+            <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider block">
+              {currentUser?.clinicName || 'Clinic Practice'}
             </span>
             <span className="text-xs font-semibold text-slate-800">
-              {currentUser?.name || 'Dr. Emily Watson'} · <span className="text-emerald-600 font-bold">Active</span>
+              {currentUser?.name || 'Staff Member'} · <span className="text-slate-500 font-medium capitalize">({currentUser?.role || 'staff'})</span>
             </span>
           </div>
 
@@ -248,7 +254,13 @@ export const Sidebar: React.FC<{
             Clinical Navigation
           </p>
           <div className="grid grid-cols-2 gap-2.5">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter((item) => {
+              if (!currentUser || !currentUser.permissions || currentUser.permissions.includes('all')) return true;
+              if (item.id === 'calendar') return currentUser.permissions.includes('appointments');
+              if (item.id === 'customers') return currentUser.permissions.includes('patients');
+              if (item.id === 'admin') return currentUser.permissions.includes('admin_view') || currentUser.role === 'admin';
+              return true;
+            }).map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (

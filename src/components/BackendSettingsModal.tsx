@@ -174,7 +174,7 @@ export const BackendSettingsModal: React.FC<BackendSettingsModalProps> = ({
               </button>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              For local dev use <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">http://localhost:8080/api/v1</code>. For Fly.io deployment use your Fly URL.
+              Live production backend: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">https://dentalsuite-backend.fly.dev/api/v1</code>
             </p>
           </div>
 

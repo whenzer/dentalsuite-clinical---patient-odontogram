@@ -22,11 +22,19 @@ export class ClinicAdminService {
   ) {}
 
   // --- Chairs ---
-  async getChairs(): Promise<DentalChairEntity[]> {
-    return this.chairsRepo.find({ order: { name: 'ASC' } });
+  async getChairs(clinicId?: string): Promise<DentalChairEntity[]> {
+    return this.chairsRepo.find({
+      where: clinicId ? { clinicId } : {},
+      order: { name: 'ASC' },
+    });
   }
 
-  async saveChairs(chairs: DentalChairEntity[]): Promise<DentalChairEntity[]> {
+  async saveChairs(clinicId: string | undefined, chairs: DentalChairEntity[]): Promise<DentalChairEntity[]> {
+    if (clinicId) {
+      chairs.forEach((c) => {
+        c.clinicId = clinicId;
+      });
+    }
     return this.chairsRepo.save(chairs);
   }
 
@@ -45,20 +53,36 @@ export class ClinicAdminService {
   }
 
   // --- Shifts ---
-  async getShifts(): Promise<StaffShiftEntity[]> {
-    return this.shiftsRepo.find({ order: { doctorName: 'ASC' } });
+  async getShifts(clinicId?: string): Promise<StaffShiftEntity[]> {
+    return this.shiftsRepo.find({
+      where: clinicId ? { clinicId } : {},
+      order: { doctorName: 'ASC' },
+    });
   }
 
-  async saveShifts(shifts: StaffShiftEntity[]): Promise<StaffShiftEntity[]> {
+  async saveShifts(clinicId: string | undefined, shifts: StaffShiftEntity[]): Promise<StaffShiftEntity[]> {
+    if (clinicId) {
+      shifts.forEach((s) => {
+        s.clinicId = clinicId;
+      });
+    }
     return this.shiftsRepo.save(shifts);
   }
 
   // --- Consumables ---
-  async getConsumables(): Promise<ConsumableItemEntity[]> {
-    return this.consumablesRepo.find({ order: { category: 'ASC', name: 'ASC' } });
+  async getConsumables(clinicId?: string): Promise<ConsumableItemEntity[]> {
+    return this.consumablesRepo.find({
+      where: clinicId ? { clinicId } : {},
+      order: { category: 'ASC', name: 'ASC' },
+    });
   }
 
-  async saveConsumables(items: ConsumableItemEntity[]): Promise<ConsumableItemEntity[]> {
+  async saveConsumables(clinicId: string | undefined, items: ConsumableItemEntity[]): Promise<ConsumableItemEntity[]> {
+    if (clinicId) {
+      items.forEach((i) => {
+        i.clinicId = clinicId;
+      });
+    }
     return this.consumablesRepo.save(items);
   }
 
@@ -72,11 +96,19 @@ export class ClinicAdminService {
   }
 
   // --- Determinations ---
-  async getDeterminations(): Promise<TreatmentDeterminationEntity[]> {
-    return this.determinationsRepo.find({ order: { urgencyRank: 'ASC', treatmentName: 'ASC' } });
+  async getDeterminations(clinicId?: string): Promise<TreatmentDeterminationEntity[]> {
+    return this.determinationsRepo.find({
+      where: clinicId ? [{ clinicId }, { clinicId: null as any }] : {},
+      order: { urgencyRank: 'ASC', treatmentName: 'ASC' },
+    });
   }
 
-  async saveDeterminations(dets: TreatmentDeterminationEntity[]): Promise<TreatmentDeterminationEntity[]> {
+  async saveDeterminations(clinicId: string | undefined, dets: TreatmentDeterminationEntity[]): Promise<TreatmentDeterminationEntity[]> {
+    if (clinicId) {
+      dets.forEach((d) => {
+        d.clinicId = clinicId;
+      });
+    }
     return this.determinationsRepo.save(dets);
   }
 }

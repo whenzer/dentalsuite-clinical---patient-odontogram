@@ -48,6 +48,7 @@ import { RecommendedServicesView } from './components/RecommendedServicesView';
 import { PatientPresentationView } from './components/PatientPresentationView';
 import { CalendarView } from './components/CalendarView';
 import { LoginPage } from './components/LoginPage';
+import { ClinicManagementPortal } from './components/ClinicManagementPortal';
 import { AdminView } from './components/AdminView';
 import { BackendSettingsModal } from './components/BackendSettingsModal';
 import { Users, ArrowRight } from 'lucide-react';
@@ -608,18 +609,25 @@ export default function App() {
     });
   };
 
-  const handleResetData = () => {
-    if (window.confirm('Reset dental clinic demo records & appointments to defaults?')) {
-      const defs = resetToDefaults();
-      setCustomers(defs);
-      handleSelectCustomer('');
-      const appts = loadAppointments();
-      setAppointments(appts);
-    }
+  const handleResetData = async () => {
+    await syncWithBackend();
   };
 
   if (!currentUser) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  // Clinic Organization Account -> Render dedicated Clinic Management Portal
+  if (currentUser.accountType === 'clinic') {
+    return (
+      <ClinicManagementPortal
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onSwitchToStaffLogin={() => {
+          handleLogout();
+        }}
+      />
+    );
   }
 
   const activeCustomer = selectedCustomerId

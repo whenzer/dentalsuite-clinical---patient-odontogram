@@ -32,12 +32,16 @@ export class AppointmentsService {
     private readonly realtimeGateway: ClinicalGateway,
   ) {}
 
-  async findAll(date?: string, doctorName?: string): Promise<AppointmentEntity[]> {
+  async findAll(clinicId?: string, date?: string, doctorName?: string): Promise<AppointmentEntity[]> {
     const query = this.appointmentsRepo
       .createQueryBuilder('appt')
       .leftJoinAndSelect('appt.reminderLogs', 'reminderLogs')
       .orderBy('appt.date', 'ASC')
       .addOrderBy('appt.startTime', 'ASC');
+
+    if (clinicId) {
+      query.andWhere('appt.clinicId = :clinicId', { clinicId });
+    }
 
     if (date) {
       query.andWhere('appt.date = :date', { date });
@@ -91,7 +95,7 @@ export class AppointmentsService {
     return conflicts > 0;
   }
 
-  async create(dto: CreateAppointmentDto): Promise<AppointmentEntity> {
+  async create(clinicId: string | undefined, dto: CreateAppointmentDto): Promise<AppointmentEntity> {
     const hasConflict = await this.checkConflicts(
       dto.date,
       dto.startTime,
@@ -108,6 +112,7 @@ export class AppointmentsService {
 
     const appt = this.appointmentsRepo.create({
       ...dto,
+      clinicId,
       status: dto.status || 'scheduled',
       automatedRemindersEnabled: dto.automatedRemindersEnabled !== false,
       reminderPreference: dto.reminderPreference || 'email',
