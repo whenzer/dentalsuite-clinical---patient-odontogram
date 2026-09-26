@@ -150,6 +150,7 @@ export class OdontogramService {
       await this.recsRepo.save(
         this.recsRepo.create({
           ...rec,
+          id: undefined,
           customerId: patientId,
         }),
       );

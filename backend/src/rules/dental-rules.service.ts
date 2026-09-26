@@ -43,7 +43,7 @@ export interface MaintenanceDue {
 }
 
 export interface RecommendedService {
-  id: string;
+  id?: string;
   customerId: string;
   title: string;
   reason: string;
@@ -143,7 +143,6 @@ export class DentalRulesService {
     // 1. Rotted / Grossly Carious (Urgent)
     if (rottedTeeth.length > 0) {
       recs.push({
-        id: `rec-rotted-${Date.now()}`,
         customerId: patientId,
         title: `Surgical Extraction / Core Build-up & Endodontic Evaluation (#${rottedTeeth.join(', #')})`,
         reason: 'Severe coronal destruction with pulp exposure risks infection and acute abscess.',
@@ -161,7 +160,6 @@ export class DentalRulesService {
     // 2. Large Cavities / Near Pulp (High)
     if (largeCavities.length > 0) {
       recs.push({
-        id: `rec-large-cav-${Date.now()}`,
         customerId: patientId,
         title: `Deep Caries Excavation & Indirect Pulp Cap (#${largeCavities.join(', #')})`,
         reason: 'Extensive decay nearing pulp chamber. Immediate excavation required to prevent root canal therapy.',
@@ -179,7 +177,6 @@ export class DentalRulesService {
     // 3. Moderate Cavities (Routine/High)
     if (moderateCavities.length > 0) {
       recs.push({
-        id: `rec-mod-cav-${Date.now()}`,
         customerId: patientId,
         title: `Multi-surface Composite Resin Restorations (#${moderateCavities.join(', #')})`,
         reason: 'Active dentinal carious lesions requiring prompt debridement and aesthetic bonded restorations.',
@@ -197,7 +194,6 @@ export class DentalRulesService {
     // 4. Small Cavities (Routine)
     if (smallCavities.length > 0) {
       recs.push({
-        id: `rec-small-cav-${Date.now()}`,
         customerId: patientId,
         title: `Conservative Micro-hybrid Composite Fillings (#${smallCavities.join(', #')})`,
         reason: 'Early pit and fissure enamel decay amenable to minimally invasive bonded restorations.',
@@ -215,7 +211,6 @@ export class DentalRulesService {
     // 5. Deep Periodontal Pockets (High)
     if (deepPockets.length > 0) {
       recs.push({
-        id: `rec-perio-deep-${Date.now()}`,
         customerId: patientId,
         title: `Quadrant Scaling & Root Planing with Local Antimicrobial (#${deepPockets.join(', #')})`,
         reason: 'Periodontal probing depth ≥ 5mm with subgingival calculus and attachment loss.',
@@ -233,7 +228,6 @@ export class DentalRulesService {
     // 6. Impacted 3rd Molars
     if (impactedTeeth.length > 0) {
       recs.push({
-        id: `rec-impacted-${Date.now()}`,
         customerId: patientId,
         title: `Surgical Odontectomy for Impacted Molars (#${impactedTeeth.join(', #')})`,
         reason: 'Impaction presents risk of pericoronitis, crowding, and root resorption of adjacent teeth.',
@@ -251,7 +245,6 @@ export class DentalRulesService {
     // 7. Missing Teeth (Prosthodontic rehabilitation)
     if (missingTeeth.length > 0 && missingTeeth.length <= 6) {
       recs.push({
-        id: `rec-implant-eval-${Date.now()}`,
         customerId: patientId,
         title: `Prosthodontic Consultation: Implant vs Fixed Bridge (#${missingTeeth.join(', #')})`,
         reason: 'Prevent supra-eruption of opposing dentition, mesial drifting, and posterior bite collapse.',
@@ -270,7 +263,6 @@ export class DentalRulesService {
     const cleaningDue = (cleaningDues || []).find((d) => d.type.includes('Cleaning') || d.type.includes('Prophylaxis'));
     if (calculusTeeth.length > 0 || (cleaningDue && cleaningDue.status !== 'up_to_date')) {
       recs.push({
-        id: `rec-prophy-${Date.now()}`,
         customerId: patientId,
         title: 'Full Mouth Ultrasonic Scaling & Air Polishing Prophylaxis',
         reason: cleaningDue?.status === 'overdue'

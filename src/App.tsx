@@ -420,33 +420,35 @@ export default function App() {
   };
 
   // Appointment & Scheduling Handlers
-  const handleSaveAppointment = (appointment: Appointment, isReschedule?: boolean) => {
-    setAppointments((prev) => {
-      const exists = prev.some((a) => a.id === appointment.id);
-      let updated: Appointment[];
-      if (exists) {
-        updated = prev.map((a) => (a.id === appointment.id ? appointment : a));
-      } else {
-        updated = [appointment, ...prev];
-      }
-      saveAppointments(updated);
-      return updated;
-    });
+  const handleSaveAppointment = async (appointment: Appointment, isReschedule?: boolean) => {
+    try {
+      let savedAppointment: Appointment;
 
-    if (isReschedule) {
-      apiClient.appointments
-        .reschedule(
+      if (isReschedule) {
+        savedAppointment = await apiClient.appointments.reschedule(
           appointment.id,
           appointment.date,
           appointment.startTime,
-          appointment.durationMinutes
-        )
-        .catch((err) => console.warn('Appointment reschedule note:', err.message));
-    } else {
-      apiClient.appointments
-        .create(appointment)
-        .catch(() => apiClient.appointments.update(appointment.id, appointment))
-        .catch((err) => console.warn('Appointment create note:', err.message));
+          appointment.durationMinutes,
+        );
+      } else {
+        const { id: _localId, reminderLogs: _localReminderLogs, ...appointmentPayload } = appointment;
+        const existing = appointments.some((item) => item.id === appointment.id);
+        savedAppointment = existing
+          ? await apiClient.appointments.update(appointment.id, appointmentPayload)
+          : await apiClient.appointments.create(appointmentPayload);
+      }
+
+      setAppointments((prev) => {
+        const exists = prev.some((item) => item.id === savedAppointment.id);
+        const updated = exists
+          ? prev.map((item) => (item.id === savedAppointment.id ? savedAppointment : item))
+          : [savedAppointment, ...prev.filter((item) => item.id !== appointment.id)];
+        saveAppointments(updated);
+        return updated;
+      });
+    } catch (err: any) {
+      console.warn(isReschedule ? 'Appointment reschedule note:' : 'Appointment save note:', err.message);
     }
   };
 

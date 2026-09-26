@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -38,7 +39,7 @@ export class AppointmentsController {
   }
 
   @Get(':id')
-  async getAppointmentById(@Param('id') id: string) {
+  async getAppointmentById(@Param('id', ParseUUIDPipe) id: string) {
     return this.appointmentsService.findOne(id);
   }
 
@@ -51,7 +52,7 @@ export class AppointmentsController {
   @Put(':id')
   @Roles('admin', 'dentist', 'receptionist')
   async updateAppointment(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: Partial<CreateAppointmentDto>,
   ) {
     return this.appointmentsService.update(id, dto);
@@ -60,7 +61,7 @@ export class AppointmentsController {
   @Put(':id/reschedule')
   @Roles('admin', 'dentist', 'receptionist')
   async rescheduleAppointment(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { date: string; startTime: string; durationMinutes?: number },
   ) {
     return this.appointmentsService.reschedule(
@@ -74,7 +75,7 @@ export class AppointmentsController {
   @Put(':id/status')
   @Roles('admin', 'dentist', 'receptionist')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { status: AppointmentStatus; cancelReason?: string },
   ) {
     return this.appointmentsService.updateStatus(id, body.status, body.cancelReason);
@@ -82,7 +83,7 @@ export class AppointmentsController {
 
   @Delete(':id')
   @Roles('admin', 'dentist', 'receptionist')
-  async deleteAppointment(@Param('id') id: string) {
+  async deleteAppointment(@Param('id', ParseUUIDPipe) id: string) {
     return this.appointmentsService.delete(id);
   }
 }

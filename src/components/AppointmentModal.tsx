@@ -143,7 +143,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       onSave(updated, true);
     } else if (mode === 'create') {
       const newAppt: Appointment = {
-        id: `appt-${Date.now()}`,
+        id: '',
         customerId,
         customerName: `${currentPatient.firstName} ${currentPatient.lastName}`,
         customerPhone: currentPatient.phone,
