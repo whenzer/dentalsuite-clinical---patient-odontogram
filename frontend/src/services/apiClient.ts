@@ -463,11 +463,13 @@ class ApiClient {
     getByPatient: (patientId: string) =>
       this.request<any[]>(`/treatments/patient/${patientId}`),
 
-    create: (data: any) =>
-      this.request<any>('/treatments', {
+    create: (data: any) => {
+      const { id: _localId, ...payload } = data;
+      return this.request<any>('/treatments', {
         method: 'POST',
-        body: JSON.stringify(data),
-      }),
+        body: JSON.stringify(payload),
+      });
+    },
 
     update: (id: string, data: any) =>
       this.request<any>(`/treatments/${id}`, {
