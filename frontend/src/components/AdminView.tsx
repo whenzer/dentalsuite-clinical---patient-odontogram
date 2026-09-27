@@ -177,10 +177,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleDeleteChair = (chairId: string) => {
-    if (chairs.length <= 1) {
-      alert('You must have at least one clinical chair.');
-      return;
-    }
     if (confirm('Are you sure you want to remove this chair?')) {
       onSaveChairs(chairs.filter((c) => c.id !== chairId));
     }
