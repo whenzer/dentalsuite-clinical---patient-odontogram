@@ -290,28 +290,52 @@ export default function App() {
   };
 
   // Admin state save handlers + backend persistence
-  const handleSaveChairs = (newChairs: DentalChair[]) => {
+  const handleSaveChairs = async (newChairs: DentalChair[]) => {
     setChairs(newChairs);
     saveChairs(newChairs);
-    apiClient.admin.saveChairs(newChairs).catch((err) => console.warn('Chairs sync note:', err.message));
+    try {
+      const savedChairs = await apiClient.admin.saveChairs(newChairs);
+      setChairs(savedChairs);
+      saveChairs(savedChairs);
+    } catch (err: any) {
+      console.warn('Chairs sync note:', err.message);
+    }
   };
 
-  const handleSaveShifts = (newShifts: StaffShift[]) => {
+  const handleSaveShifts = async (newShifts: StaffShift[]) => {
     setShifts(newShifts);
     saveShifts(newShifts);
-    apiClient.admin.saveShifts(newShifts).catch((err) => console.warn('Shifts sync note:', err.message));
+    try {
+      const savedShifts = await apiClient.admin.saveShifts(newShifts);
+      setShifts(savedShifts);
+      saveShifts(savedShifts);
+    } catch (err: any) {
+      console.warn('Shifts sync note:', err.message);
+    }
   };
 
-  const handleSaveConsumables = (newConsumables: ConsumableItem[]) => {
+  const handleSaveConsumables = async (newConsumables: ConsumableItem[]) => {
     setConsumables(newConsumables);
     saveConsumables(newConsumables);
-    apiClient.admin.saveConsumables(newConsumables).catch((err) => console.warn('Consumables sync note:', err.message));
+    try {
+      const savedConsumables = await apiClient.admin.saveConsumables(newConsumables);
+      setConsumables(savedConsumables);
+      saveConsumables(savedConsumables);
+    } catch (err: any) {
+      console.warn('Consumables sync note:', err.message);
+    }
   };
 
-  const handleSaveDeterminations = (newDets: TreatmentDetermination[]) => {
+  const handleSaveDeterminations = async (newDets: TreatmentDetermination[]) => {
     setDeterminations(newDets);
     saveDeterminations(newDets);
-    apiClient.admin.saveDeterminations(newDets).catch((err) => console.warn('Determinations sync note:', err.message));
+    try {
+      const savedDeterminations = await apiClient.admin.saveDeterminations(newDets);
+      setDeterminations(savedDeterminations);
+      saveDeterminations(savedDeterminations);
+    } catch (err: any) {
+      console.warn('Determinations sync note:', err.message);
+    }
   };
 
   // Sync selected customer in storage

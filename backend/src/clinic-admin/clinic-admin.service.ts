@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { DentalChairEntity } from './entities/dental-chair.entity';
 import { StaffShiftEntity } from './entities/staff-shift.entity';
 import { ConsumableItemEntity } from './entities/consumable-item.entity';
@@ -30,16 +30,11 @@ export class ClinicAdminService {
   }
 
   async saveChairs(clinicId: string | undefined, chairs: DentalChairEntity[]): Promise<DentalChairEntity[]> {
-    if (clinicId) {
-      chairs.forEach((c) => {
-        c.clinicId = clinicId;
-      });
-    }
-    return this.chairsRepo.save(chairs);
+    return this.replaceClinicCollection(this.chairsRepo, clinicId, chairs);
   }
 
-  async updateChairStatus(id: string, status: 'operational' | 'in_use' | 'maintenance'): Promise<DentalChairEntity> {
-    const chair = await this.chairsRepo.findOne({ where: { id } });
+  async updateChairStatus(clinicId: string | undefined, id: string, status: 'operational' | 'in_use' | 'maintenance'): Promise<DentalChairEntity> {
+    const chair = await this.chairsRepo.findOne({ where: clinicId ? { id, clinicId } : { id } });
     if (!chair) {
       throw new NotFoundException(`Chair with ID ${id} not found`);
     }
@@ -61,12 +56,7 @@ export class ClinicAdminService {
   }
 
   async saveShifts(clinicId: string | undefined, shifts: StaffShiftEntity[]): Promise<StaffShiftEntity[]> {
-    if (clinicId) {
-      shifts.forEach((s) => {
-        s.clinicId = clinicId;
-      });
-    }
-    return this.shiftsRepo.save(shifts);
+    return this.replaceClinicCollection(this.shiftsRepo, clinicId, shifts);
   }
 
   // --- Consumables ---
@@ -78,16 +68,11 @@ export class ClinicAdminService {
   }
 
   async saveConsumables(clinicId: string | undefined, items: ConsumableItemEntity[]): Promise<ConsumableItemEntity[]> {
-    if (clinicId) {
-      items.forEach((i) => {
-        i.clinicId = clinicId;
-      });
-    }
-    return this.consumablesRepo.save(items);
+    return this.replaceClinicCollection(this.consumablesRepo, clinicId, items);
   }
 
-  async restockConsumable(id: string, quantityToAdd: number): Promise<ConsumableItemEntity> {
-    const item = await this.consumablesRepo.findOne({ where: { id } });
+  async restockConsumable(clinicId: string | undefined, id: string, quantityToAdd: number): Promise<ConsumableItemEntity> {
+    const item = await this.consumablesRepo.findOne({ where: clinicId ? { id, clinicId } : { id } });
     if (!item) {
       throw new NotFoundException(`Consumable item with ID ${id} not found`);
     }
@@ -104,11 +89,42 @@ export class ClinicAdminService {
   }
 
   async saveDeterminations(clinicId: string | undefined, dets: TreatmentDeterminationEntity[]): Promise<TreatmentDeterminationEntity[]> {
-    if (clinicId) {
-      dets.forEach((d) => {
-        d.clinicId = clinicId;
-      });
+    return this.replaceClinicCollection(this.determinationsRepo, clinicId, dets);
+  }
+
+  private async replaceClinicCollection<T extends { id: string; clinicId?: string }>(
+    repository: Repository<T>,
+    clinicId: string | undefined,
+    incoming: T[],
+  ): Promise<T[]> {
+    if (!clinicId) {
+      throw new BadRequestException('A clinic context is required to modify clinic data');
     }
-    return this.determinationsRepo.save(dets);
+
+    const ids = incoming.map((item) => item.id).filter(Boolean);
+    const existingWithMatchingIds = ids.length
+      ? await repository.find({ where: { id: In(ids) } as any })
+      : [];
+    const foreignIds = existingWithMatchingIds
+      .filter((item) => item.clinicId !== clinicId)
+      .map((item) => item.id);
+    if (foreignIds.length > 0) {
+      throw new BadRequestException(`One or more records belong to another clinic: ${foreignIds.join(', ')}`);
+    }
+
+    const entities = incoming.map((item) => ({ ...item, clinicId }) as T);
+    await repository.manager.transaction(async (manager) => {
+      const scopedRepository = manager.getRepository(repository.target);
+      if (ids.length > 0) {
+        await scopedRepository.delete({ clinicId, id: Not(In(ids)) } as any);
+      } else {
+        await scopedRepository.delete({ clinicId } as any);
+      }
+      if (entities.length > 0) {
+        await scopedRepository.save(entities);
+      }
+    });
+
+    return repository.find({ where: { clinicId } as any });
   }
 }

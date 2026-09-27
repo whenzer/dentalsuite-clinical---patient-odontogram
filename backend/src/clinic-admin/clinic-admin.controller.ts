@@ -37,10 +37,11 @@ export class ClinicAdminController {
   @Put('chairs/:id/status')
   @Roles('admin', 'dentist', 'receptionist', 'clinic_admin')
   async updateChairStatus(
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @Body('status') status: 'operational' | 'in_use' | 'maintenance',
   ) {
-    return this.adminService.updateChairStatus(id, status);
+    return this.adminService.updateChairStatus(user?.clinicId, id, status);
   }
 
   // Shifts
@@ -70,10 +71,11 @@ export class ClinicAdminController {
   @Post('consumables/:id/restock')
   @Roles('admin', 'dentist', 'clinic_admin')
   async restockConsumable(
+    @CurrentUser() user: any,
     @Param('id') id: string,
     @Body('quantity') quantity: number,
   ) {
-    return this.adminService.restockConsumable(id, quantity);
+    return this.adminService.restockConsumable(user?.clinicId, id, quantity);
   }
 
   // Treatment Determinations
